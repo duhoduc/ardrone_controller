@@ -19,7 +19,7 @@ Additionally, you need to have ardrone_autonomy (https://github.com/AutonomyLab/
  * Put the battery into the AR.Drone (make sure it is on a level surface while booting). The Ar.Drone will create its own ad-hoc network.
  * Copy over the wpa_supplicant binaries by running the install script 'script/install'
  * Connect to the drone's network
- * Connect the drone to the ACT Cage network 'script/connect 'ACT Cage' -p "crazydrone" -a dhcp'.
+ * Connect the drone to the ACT Cage network '''script/connect 'ACT Cage' -p "crazydrone" -a dhcp'''.
  * Log back onto ACT Cage
 2. Launch the ardrone driver 'roslaunch ardrone_autonomy ardrone.launch'
 3. Launch the vicon driver 'roslaunch vicon_bridge vicon.launch'
@@ -29,3 +29,4 @@ Additionally, you need to have ardrone_autonomy (https://github.com/AutonomyLab/
 ## Notes
 * If the firmware for the drone comes up a 0.0.0 on launch of ardrone_autonomy, you have to restart the drone and often the computer
 * If the drone is in emergency mode (red LEDs on), you can reset using `rostopic pub /ardrone/reset std_msgs/Empty`
+* To run the python files (steps 5 and 6), the files need to be executable. Use chmod +x on each of the .py files.
