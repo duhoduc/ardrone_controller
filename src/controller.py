@@ -2,6 +2,7 @@
 
 import rospy
 import math
+import numpy as np
 import tf
 from tf import TransformListener
 from std_msgs.msg import Empty, Float32, Float32MultiArray
@@ -54,6 +55,7 @@ class Controller():
     ActionHover = 1
     ActionLand = 2
     ActionAnimation = 3
+    previousTime = rospy.get_time()
 
     def __init__(self):
         self.lastNavdata = None
@@ -62,6 +64,7 @@ class Controller():
         rospy.Subscriber("ardrone/navdata", Navdata, self.on_navdata)
         rospy.Subscriber("arcontroller/goal", Goal , self.on_goal)
         rospy.Subscriber("arcontroller/waypoints", Waypoints, self.on_waypoints)
+        rospy.Subscriber("qualisys/ARDrone",PoseStamped,self.get_current_pose)
         self.pubTakeoff = rospy.Publisher('ardrone/takeoff', Empty, queue_size=1)
         self.pubLand = rospy.Publisher('ardrone/land', Empty, queue_size=1)
         self.pubNav = rospy.Publisher('cmd_vel', Twist, queue_size=1)
@@ -90,6 +93,9 @@ class Controller():
         self.goal = [0,0,height,0] #set it to center to start
         self.goal_done = False
         self.waypoints = None
+
+    def get_current_pose(self,data)
+        self.current_pose = data.pose
 
     def on_navdata(self, data):
         self.lastNavdata = data
@@ -127,10 +133,10 @@ class Controller():
             #goal = points[i]
             # transform target world coordinates into local coordinates
             targetWorld = PoseStamped()
-            t = self.listener.getLatestCommonTime("/vicon/ar_drone/ar_drone", "/world")
-            if self.listener.canTransform("/vicon/ar_drone/ar_drone", "/world", t):
+            t = self.listener.getLatestCommonTime("/ARDrone", "/mocap")
+            if self.listener.canTransform("/ARDrone", "/mocap", t):
                 targetWorld.header.stamp = t
-                targetWorld.header.frame_id = "world"
+                targetWorld.header.frame_id = "mocap"
                 targetWorld.pose.position.x = self.goal[0]
                 targetWorld.pose.position.y = self.goal[1]
                 targetWorld.pose.position.z = self.goal[2]
@@ -140,7 +146,7 @@ class Controller():
                 targetWorld.pose.orientation.z = quaternion[2]
                 targetWorld.pose.orientation.w = quaternion[3]
 
-                targetDrone = self.listener.transformPose("/vicon/ar_drone/ar_drone", targetWorld)
+                targetDrone = self.listener.transformPose("/ARDrone", targetWorld)
 
                 quaternion = (
                         targetDrone.pose.orientation.x,
@@ -152,9 +158,19 @@ class Controller():
                 # Run PID controller and send navigation message
                 msg = Twist()
                 scale = 0.4
-                msg.linear.x = scale*self.pidX.update(0.0, targetDrone.pose.position.x)
-                msg.linear.y = scale*self.pidY.update(0.0, targetDrone.pose.position.y)
+                #msg.linear.x = scale*self.pidX.update(0.0, targetDrone.pose.position.x)
+                #msg.linear.y = scale*self.pidY.update(0.0, targetDrone.pose.position.y)
                     
+
+                pid_x = scale*self.pidX.update(0.0, targetDrone.pose.position.x)
+                pid_y = scale*self.pidY.update(0.0, targetDrone.pose.position.y)
+                true_yaw = goal[2]-euler[2];
+                Ryaw = np.array([[np.cos(true_yaw), np.sin(true_yaw)],[-np.sin(true_yaw), np.cos(true_yaw)]])
+                pid_xy = np.matmul(Ryaw,np.array([pid_x],[pid_y]))
+                msg.linear.x = pid_xy[0]
+                msg.linear.y = pid_xy[1]
+
+                # Do not stop when pass a waypoint
                 if (index != points.len()-1):
                     if (math.fabs(msg.linear.x) < minX) :
                         if (msg.linear.x < 0) :
@@ -166,12 +182,17 @@ class Controller():
                             msg.linear.y = -minY
                         elif (msg.linear.y > 0):
                             msg.linear.y = minY
-                    
+
                 msg.linear.z = self.pidZ.update(0.0, targetDrone.pose.position.z)
                 msg.angular.z = self.pidYaw.update(0.0, euler[2])
                 # disable hover mode
                 msg.angular.x = 1
                 self.pubNav.publish(msg)
+                log_msg = 'Current pos:' + [self.current_pose.position.x, self.current_pose.postion.y, self.current_pose.position.z]
+                time = rospy.get_time()
+                if time-self.previousTime>1:
+                    rospy.loginfo(log_msg)
+                    self.previousTime =time
 
                 if (math.fabs(targetDrone.pose.position.x) < 0.2
                     and math.fabs(targetDrone.pose.position.y) < 0.2
@@ -192,8 +213,8 @@ class Controller():
         self.goal = goal
         # transform target world coordinates into local coordinates
         targetWorld = PoseStamped()
-        t = self.listener.getLatestCommonTime("/vicon/ar_drone/ar_drone", "/world")
-        if self.listener.canTransform("/vicon/ar_drone/ar_drone", "/world", t):
+        t = self.listener.getLatestCommonTime("/ARDrone", "/mocap")
+        if self.listener.canTransform("/ARDrone", "/mocap", t):
             targetWorld.header.stamp = t
             targetWorld.header.frame_id = "world"
             targetWorld.pose.position.x = goal[0]
@@ -205,7 +226,7 @@ class Controller():
             targetWorld.pose.orientation.z = quaternion[2]
             targetWorld.pose.orientation.w = quaternion[3]
 
-            targetDrone = self.listener.transformPose("/vicon/ar_drone/ar_drone", targetWorld)
+            targetDrone = self.listener.transformPose("/ARDrone", targetWorld)
 
             quaternion = (
                 targetDrone.pose.orientation.x,
@@ -217,13 +238,29 @@ class Controller():
             # Run PID controller and send navigation message
             msg = Twist()
             scale = 0.4
-            msg.linear.x = scale*self.pidX.update(0.0, targetDrone.pose.position.x)
-            msg.linear.y = scale*self.pidY.update(0.0, targetDrone.pose.position.y)
+            #msg.linear.x = scale*self.pidX.update(0.0, targetDrone.pose.position.x)
+            #msg.linear.y = scale*self.pidY.update(0.0, targetDrone.pose.position.y)
+
+            pid_x = scale*self.pidX.update(0.0, targetDrone.pose.position.x)
+            pid_y = scale*self.pidY.update(0.0, targetDrone.pose.position.y)
+            true_yaw = goal[2]-euler[2];
+            Ryaw = np.array([[np.cos(true_yaw), np.sin(true_yaw)],[-np.sin(true_yaw), np.cos(true_yaw)]])
+            pid_xy = np.matmul(Ryaw,np.array([pid_x],[pid_y]))
+            msg.linear.x = pid_xy[0]
+            msg.linear.y = pid_xy[1]
+
             msg.linear.z = self.pidZ.update(0.0, targetDrone.pose.position.z)
             msg.angular.z = self.pidYaw.update(0.0, euler[2])
             # disable hover mode
             msg.angular.x = 1
             self.pubNav.publish(msg)
+
+            log_msg = 'Current pos:' + [self.current_pose.position.x, self.current_pose.postion.y, self.current_pose.position.z]
+            time = rospy.get_time()
+            if time-self.previousTime>1:
+                rospy.loginfo(log_msg)
+                self.previousTime =time
+
 
             if (math.fabs(targetDrone.pose.position.x) < 0.2
                 and math.fabs(targetDrone.pose.position.y) < 0.2
