@@ -14,9 +14,13 @@ Additionally, you need to have ardrone_autonomy (https://github.com/AutonomyLab/
 
 ## Usage
 
+Setup the qualisys system, keep the x axis of qualisys aligns to x of drone (forward), set the name of drone as ARDrone in qualisys
+
+Qualisys publishs frame "ARDrone" if this was set as name of 6D object, mocap is base-frame of the qualisys.
+
 1. Connect the AR.Drone to our network:
 2. Launch the ardrone driver ```roslaunch ardrone_autonomy ardrone.launch```
-3. Launch the vicon driver ```roslaunch vicon_bridge vicon.launch```
+3. Launch the vicon driver ```roslaunch mocap_qualisys qualisys.launch```
 4. Launch the rviz file ```roslaunch rviz rviz -d controller.rviz``` from the launch directory of ardrone_controller
 5. Run the controller ```rosrun ardrone_controller controller.py```
 6. Run the ui for the controller ```rosrun ardrone_controller control_ui.py```

@@ -9,9 +9,19 @@ height =  1.25
 #         [-1.54, -1.27, height, 0.933 ]
 #        ]
 goals = [[0, 0, height, 0 ],
-         [1.85, 0, height, 0 ],
-         [-1,85, 0, height, 0]
+         [1.5, 0, height, 0 ],
+         [-1,5, 0, height, 0]
         ]
+
+waypoints = [[1.5, 0, height, 0],
+        [-1.5, 0, height, 0],
+        [1.5, 0, height, 0],
+        [-1.5, 0, height, 0],
+        [1.5, 0, height, 0],
+        [-1.5, 0, height, 0],
+        [1.5, 0, height, 0],
+        [-1.5, 0, height, 0],
+        [0, 0, height, 0]]
 
 def talker():
     pubGoal = rospy.Publisher('arcontroller/goal', Goal, queue_size=10)
@@ -24,7 +34,7 @@ def talker():
     rospy.init_node('talker', anonymous=True)
     rate = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
-        choice = raw_input('Choose a goal: (1)Center, (2)Back, (3)Front, (4)Forward Waypoints, (5)None\n')
+        choice = raw_input('Choose a goal: (1)Center, (2)Back, (3)Front, (4)Forward Waypoints, (5)Land, \n')
         if choice == '1':
             goal.x = goals[0][0]
             goal.y = goals[0][1]
@@ -44,7 +54,10 @@ def talker():
             goal.yaw = goals[2][3]
             pubGoal.publish(goal)
         elif choice == '4':
-            pass#self.waypoint_follower(self.points_forward)
+            #pass#self.waypoint_follower(self.points_forward)
+            pubWaypoints.publish(waypoints)
+        elif choice == 5:
+            rospy.Publisher('ardrone/land', Empty, queue_size=1)
         else:
             pass
         rospy.sleep(0.1)
