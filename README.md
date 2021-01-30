@@ -1,26 +1,20 @@
 Ardrone Controller
 ====
 
-ROS Package (and utilities) to run the ardrone controller with a vicon system.
+ROS Package (and utilities) to run the ardrone controller with a qualisys system.
 
 ## Installation
 
 Clone the package into your catkin workspace:
 ```
-git clone https://github.com/ewcha/ardrone_controller.git
+git clone https://github.com/duhoduc/ardrone_controller.git
 ```
 
-Additionally, you need to have ardrone_autonomy (https://github.com/AutonomyLab/ardrone_autonomy) and vicon_bridge (https://github.com/ethz-asl/vicon_bridge) in your ROS Path.
+Additionally, you need to have ardrone_autonomy (https://github.com/AutonomyLab/ardrone_autonomy) and qualisys (https://github.com/KTH-SML/motion_capture_system) in your ROS Path.
 
 ## Usage
 
 1. Connect the AR.Drone to our network:
- * Download binaries and scripts from https://github.com/daraosn/ardrone-wpa2.git
- * Put the battery into the AR.Drone (make sure it is on a level surface while booting). The Ar.Drone will create its own ad-hoc network.
- * Copy over the wpa_supplicant binaries by running the install script ```script/install```
- * Connect to the drone's network
- * Connect the drone to the ACT Cage network ```script/connect 'ACT Cage' -p "*********" -a dhcp```.
- * Log back onto ACT Cage
 2. Launch the ardrone driver ```roslaunch ardrone_autonomy ardrone.launch```
 3. Launch the vicon driver ```roslaunch vicon_bridge vicon.launch```
 4. Launch the rviz file ```roslaunch rviz rviz -d controller.rviz``` from the launch directory of ardrone_controller
