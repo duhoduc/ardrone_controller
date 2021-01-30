@@ -55,7 +55,7 @@ class Controller():
     ActionHover = 1
     ActionLand = 2
     ActionAnimation = 3
-    previousTime = rospy.get_time()
+    
 
     def __init__(self):
         self.lastNavdata = None
@@ -72,6 +72,7 @@ class Controller():
 
         self.listener = TransformListener()
         self.action = Controller.ActionTakeOff
+        self.previousTime = rospy.get_time()
 
         self.pidX = PID(0.2, 0.12, 0.0, -0.3, 0.3, "x")
         self.pidY = PID(0.2, 0.12, 0.0, -0.3, 0.3, "y")
@@ -188,16 +189,17 @@ class Controller():
                 # disable hover mode
                 msg.angular.x = 1
                 self.pubNav.publish(msg)
-                log_msg = 'Current pos:' + [self.current_pose.position.x, self.current_pose.postion.y, self.current_pose.position.z]
+
                 time = rospy.get_time()
                 if time-self.previousTime>1:
+                    log_msg = 'Current pos:' + [self.current_pose.position.x, self.current_pose.postion.y, self.current_pose.position.z]
                     rospy.loginfo(log_msg)
                     self.previousTime =time
 
-                if (math.fabs(targetDrone.pose.position.x) < 0.2
-                    and math.fabs(targetDrone.pose.position.y) < 0.2
+                if (math.fabs(targetDrone.pose.position.x) < 0.1
+                    and math.fabs(targetDrone.pose.position.y) < 0.1
                     and math.fabs(targetDrone.pose.position.z) < 0.2
-                    and math.fabs(euler[2]) < math.radians(20)):
+                    and math.fabs(euler[2]) < math.radians(10)):
                         
                     if (index < points.len()-1):
                         index += 1                             
@@ -255,17 +257,17 @@ class Controller():
             msg.angular.x = 1
             self.pubNav.publish(msg)
 
-            log_msg = 'Current pos:' + [self.current_pose.position.x, self.current_pose.postion.y, self.current_pose.position.z]
             time = rospy.get_time()
             if time-self.previousTime>1:
+                log_msg = 'Current pos:' + [self.current_pose.position.x, self.current_pose.postion.y, self.current_pose.position.z]
                 rospy.loginfo(log_msg)
                 self.previousTime =time
 
 
-            if (math.fabs(targetDrone.pose.position.x) < 0.2
-                and math.fabs(targetDrone.pose.position.y) < 0.2
+            if (math.fabs(targetDrone.pose.position.x) < 0.1
+                and math.fabs(targetDrone.pose.position.y) < 0.1
                 and math.fabs(targetDrone.pose.position.z) < 0.2
-                and math.fabs(euler[2]) < math.radians(20)):
+                and math.fabs(euler[2]) < math.radians(10)):
                 self.goal_done = True 
                 rospy.loginfo("Goal done.")           
 
