@@ -29,7 +29,7 @@ def talker():
 
     goal = Goal()
     waypoints = Waypoints()
-
+    pubLand = rospy.Publisher('ardrone/land', Empty, queue_size=1)
 
     rospy.init_node('talker', anonymous=True)
     rate = rospy.Rate(10) # 10hz
@@ -57,7 +57,7 @@ def talker():
             #pass#self.waypoint_follower(self.points_forward)
             pubWaypoints.publish(waypoints)
         elif choice == 5:
-            rospy.Publisher('ardrone/land', Empty, queue_size=1)
+            pubLand.publish()
         else:
             pass
         rospy.sleep(0.1)
