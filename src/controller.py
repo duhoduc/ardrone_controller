@@ -165,11 +165,9 @@ class Controller():
 
                 pid_x = scale*self.pidX.update(0.0, targetDrone.pose.position.x)
                 pid_y = scale*self.pidY.update(0.0, targetDrone.pose.position.y)
-                true_yaw = goal[2]-euler[2];
-                Ryaw = np.array([[np.cos(true_yaw), np.sin(true_yaw)],[-np.sin(true_yaw), np.cos(true_yaw)]])
-                pid_xy = np.matmul(Ryaw,np.array([pid_x],[pid_y]))
-                msg.linear.x = pid_xy[0]
-                msg.linear.y = pid_xy[1]
+                true_yaw = goal[2]-euler[2]
+                msg.linear.x = math.cos(true_yaw)*pid_x + math.sin(true_yaw)*pid_y
+                msg.linear.y = -math.sin(true_yaw)*pid_x + math.cos(true_yaw)*pid_y
 
                 # Do not stop when pass a waypoint
                 if (index != points.len()-1):
@@ -196,8 +194,7 @@ class Controller():
                     rospy.loginfo(log_msg)
                     self.previousTime =time
 
-                if (math.fabs(targetDrone.pose.position.x) < 0.1
-                    and math.fabs(targetDrone.pose.position.y) < 0.1
+                if (math.sqrt(targetDrone.pose.position.x**2+targetDrone.pose.position.y**2) < 0.1
                     and math.fabs(targetDrone.pose.position.z) < 0.2
                     and math.fabs(euler[2]) < math.radians(10)):
                         
@@ -245,11 +242,9 @@ class Controller():
 
             pid_x = scale*self.pidX.update(0.0, targetDrone.pose.position.x)
             pid_y = scale*self.pidY.update(0.0, targetDrone.pose.position.y)
-            true_yaw = goal[2]-euler[2];
-            Ryaw = np.array([[np.cos(true_yaw), np.sin(true_yaw)],[-np.sin(true_yaw), np.cos(true_yaw)]])
-            pid_xy = np.matmul(Ryaw,np.array([pid_x],[pid_y]))
-            msg.linear.x = pid_xy[0]
-            msg.linear.y = pid_xy[1]
+            true_yaw = goal[2]-euler[2]
+            msg.linear.x = math.cos(true_yaw)*pid_x + math.sin(true_yaw)*pid_y
+            msg.linear.y = -math.sin(true_yaw)*pid_x + math.cos(true_yaw)*pid_y
 
             msg.linear.z = self.pidZ.update(0.0, targetDrone.pose.position.z)
             msg.angular.z = self.pidYaw.update(0.0, euler[2])
@@ -264,8 +259,7 @@ class Controller():
                 self.previousTime =time
 
 
-            if (math.fabs(targetDrone.pose.position.x) < 0.1
-                and math.fabs(targetDrone.pose.position.y) < 0.1
+            if (math.sqrt(targetDrone.pose.position.x**2+targetDrone.pose.position.y**2) < 0.1
                 and math.fabs(targetDrone.pose.position.z) < 0.2
                 and math.fabs(euler[2]) < math.radians(10)):
                 self.goal_done = True 
