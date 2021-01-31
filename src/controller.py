@@ -11,7 +11,7 @@ from ardrone_autonomy.srv import FlightAnim
 from geometry_msgs.msg import Twist, PoseStamped
 from ardrone_controller.msg import Goal, Waypoints
 
-height =  1.25
+height =  1.0
 
 class PID:
     def __init__(self, kp, kd, ki, minOutput, maxOutput, name):
@@ -59,6 +59,7 @@ class Controller():
 
     def __init__(self):
         self.lastNavdata = None
+        self.current_pose = None
         self.lastState = State.Unknown
         rospy.on_shutdown(self.on_shutdown)
         rospy.Subscriber("ardrone/navdata", Navdata, self.on_navdata)
@@ -73,11 +74,13 @@ class Controller():
         self.listener = TransformListener()
         self.action = Controller.ActionTakeOff
         self.previousTime = rospy.get_time()
+		
 
-        self.pidX = PID(0.2, 0.12, 0.0, -0.3, 0.3, "x")
-        self.pidY = PID(0.2, 0.12, 0.0, -0.3, 0.3, "y")
-        self.pidZ = PID(1.0, 0, 0.0, -1.0, 1.0, "z")
-        self.pidYaw = PID(0.5, 0, 0.0, -0.6, 0.6, "yaw")
+        self.pidX = PID(0.5, 0.12, 0.0, -1, 1, "x")
+        self.pidY = PID(0.5, 0.12, 0.0, -1, 1, "y")
+        self.pidZ = PID(1.0, 0.1, 0.25, -1.0, 1.0, "z")
+        self.pidYaw = PID(0.5, 0.15, 0.0, -0.6, 0.6, "yaw")
+        self.scale = 0.5
 
         # X, Y, Z, Yaw
         #self.goals = [
@@ -95,8 +98,8 @@ class Controller():
         self.goal_done = False
         self.waypoints = None
 
-    def get_current_pose(self,data)
-        self.current_pose = data.pose
+    def get_current_pose(self,data):
+        self.current_pose = data
 
     def on_navdata(self, data):
         self.lastNavdata = data
@@ -120,12 +123,14 @@ class Controller():
     def on_waypoints(self,data):
         rospy.loginfo('New waypoints.')
         self.waypoints = []
-        for d in data.waypoints:
-            self.waypoints.append(d)
+        for d in range(0,data.len):
+            self.waypoints.append([data.waypoints[d].x, data.waypoints[d].y, data.waypoints[d].z, data.waypoints[d].yaw])
+        rospy.loginfo(self.waypoints)
 
    
     def waypoint_follower(self, points): 
-        index = 0 
+        index = 0
+        rospy.loginfo(points)
         self.goal = points[index] #get the first point
         minX = .05
         minY = .05 
@@ -159,18 +164,18 @@ class Controller():
                 # Run PID controller and send navigation message
                 msg = Twist()
                 scale = 0.4
-                #msg.linear.x = scale*self.pidX.update(0.0, targetDrone.pose.position.x)
-                #msg.linear.y = scale*self.pidY.update(0.0, targetDrone.pose.position.y)
+                msg.linear.x = self.scale*self.pidX.update(0.0, targetDrone.pose.position.x)
+                msg.linear.y = self.scale*self.pidY.update(0.0, targetDrone.pose.position.y)
                     
 
-                pid_x = scale*self.pidX.update(0.0, targetDrone.pose.position.x)
-                pid_y = scale*self.pidY.update(0.0, targetDrone.pose.position.y)
-                true_yaw = goal[2]-euler[2]
-                msg.linear.x = math.cos(true_yaw)*pid_x + math.sin(true_yaw)*pid_y
-                msg.linear.y = -math.sin(true_yaw)*pid_x + math.cos(true_yaw)*pid_y
+                #pid_x = scale*self.pidX.update(0.0, targetDrone.pose.position.x)
+                #pid_y = scale*self.pidY.update(0.0, targetDrone.pose.position.y)
+                #true_yaw = goal[3]-euler[2]
+                #msg.linear.x = math.cos(true_yaw)*pid_x + math.sin(true_yaw)*pid_y
+                #msg.linear.y = -math.sin(true_yaw)*pid_x + math.cos(true_yaw)*pid_y
 
                 # Do not stop when pass a waypoint
-                if (index != points.len()-1):
+                if (index != len(points)-1):
                     if (math.fabs(msg.linear.x) < minX) :
                         if (msg.linear.x < 0) :
                             msg.linear.x = -minX
@@ -185,20 +190,22 @@ class Controller():
                 msg.linear.z = self.pidZ.update(0.0, targetDrone.pose.position.z)
                 msg.angular.z = self.pidYaw.update(0.0, euler[2])
                 # disable hover mode
-                msg.angular.x = 1
+                msg.angular.x = 0
                 self.pubNav.publish(msg)
 
                 time = rospy.get_time()
                 if time-self.previousTime>1:
-                    log_msg = 'Current pos:' + [self.current_pose.position.x, self.current_pose.postion.y, self.current_pose.position.z]
-                    rospy.loginfo(log_msg)
+                #log_msg = "Current pos:" + [targetDrone.pose.position.x, targetDrone.pose.position.y,targetDrone.pose.position.z]
+                    rospy.loginfo('Current pos: x:%.2f, y:%.2f, z:%.2f, yaw:%.2f, bat:%.2f',targetDrone.pose.position.x,targetDrone.pose.position.y,targetDrone.pose.position.z,euler[2],self.lastNavdata.batteryPercent)
+                    rospy.loginfo('COntrol:%.2f,%.2f,%.2f,%.2f',msg.linear.x, msg.linear.y,msg.linear.z,msg.angular.z)
                     self.previousTime =time
 
-                if (math.sqrt(targetDrone.pose.position.x**2+targetDrone.pose.position.y**2) < 0.1
+                if (math.fabs(targetDrone.pose.position.x) < 0.1
+                    and math.fabs(targetDrone.pose.position.y) < 0.1
                     and math.fabs(targetDrone.pose.position.z) < 0.2
                     and math.fabs(euler[2]) < math.radians(10)):
                         
-                    if (index < points.len()-1):
+                    if (index < len(points)-1):
                         index += 1                             
                         self.goal = points[index] 
                     else:
@@ -215,7 +222,7 @@ class Controller():
         t = self.listener.getLatestCommonTime("/ARDrone", "/mocap")
         if self.listener.canTransform("/ARDrone", "/mocap", t):
             targetWorld.header.stamp = t
-            targetWorld.header.frame_id = "world"
+            targetWorld.header.frame_id = "mocap"
             targetWorld.pose.position.x = goal[0]
             targetWorld.pose.position.y = goal[1]
             targetWorld.pose.position.z = goal[2]
@@ -237,33 +244,41 @@ class Controller():
             # Run PID controller and send navigation message
             msg = Twist()
             scale = 0.4
-            #msg.linear.x = scale*self.pidX.update(0.0, targetDrone.pose.position.x)
-            #msg.linear.y = scale*self.pidY.update(0.0, targetDrone.pose.position.y)
+            msg.linear.x = self.scale*self.pidX.update(0.0, targetDrone.pose.position.x)
+            msg.linear.y = self.scale*self.pidY.update(0.0, targetDrone.pose.position.y)
 
-            pid_x = scale*self.pidX.update(0.0, targetDrone.pose.position.x)
-            pid_y = scale*self.pidY.update(0.0, targetDrone.pose.position.y)
-            true_yaw = goal[2]-euler[2]
-            msg.linear.x = math.cos(true_yaw)*pid_x + math.sin(true_yaw)*pid_y
-            msg.linear.y = -math.sin(true_yaw)*pid_x + math.cos(true_yaw)*pid_y
+            #pid_x = scale*self.pidX.update(0.0, targetDrone.pose.position.x)
+            #pid_y = scale*self.pidY.update(0.0, targetDrone.pose.position.y)
+            #true_yaw = goal[3]-euler[2]
+            #msg.linear.x = math.cos(true_yaw)*pid_x + math.sin(true_yaw)*pid_y
+            #msg.linear.y = -math.sin(true_yaw)*pid_x + math.cos(true_yaw)*pid_y
 
             msg.linear.z = self.pidZ.update(0.0, targetDrone.pose.position.z)
             msg.angular.z = self.pidYaw.update(0.0, euler[2])
             # disable hover mode
-            msg.angular.x = 1
+            msg.angular.x = 0
             self.pubNav.publish(msg)
 
             time = rospy.get_time()
             if time-self.previousTime>1:
-                log_msg = 'Current pos:' + [self.current_pose.position.x, self.current_pose.postion.y, self.current_pose.position.z]
-                rospy.loginfo(log_msg)
+                #log_msg = "Current pos:" + [targetDrone.pose.position.x, targetDrone.pose.position.y,targetDrone.pose.position.z]
+                rospy.loginfo('Current pos: x:%.2f, y:%.2f, z:%.2f, yaw:%.2f, bat:%.2f',targetDrone.pose.position.x, targetDrone.pose.position.y,targetDrone.pose.position.z,euler[2],self.lastNavdata.batteryPercent)
+                rospy.loginfo('COntrol:%.2f,%.2f,%.2f,%.2f',msg.linear.x, msg.linear.y,msg.linear.z,msg.angular.z)
                 self.previousTime =time
+                if self.goal_done:
+                    rospy.loginfo("Goal done.")
 
 
-            if (math.sqrt(targetDrone.pose.position.x**2+targetDrone.pose.position.y**2) < 0.1
+
+            if (math.fabs(targetDrone.pose.position.x) < 0.1
+                and math.fabs(targetDrone.pose.position.y) < 0.1
                 and math.fabs(targetDrone.pose.position.z) < 0.2
-                and math.fabs(euler[2]) < math.radians(10)):
-                self.goal_done = True 
-                rospy.loginfo("Goal done.")           
+                and math.fabs(euler[2]) < math.radians(5)):
+                self.goal_done = True
+                #rospy.loginfo("Goal done.") 
+                #time = rospy.get_time()
+                #if time-self.previousTime>1:
+                #	rospy.loginfo("Goal done.")           
 
 
     def run(self):
