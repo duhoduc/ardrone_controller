@@ -287,6 +287,7 @@ class Controller():
                 rospy.loginfo('Current distance to goal: x:%.2f, y:%.2f, z:%.2f, yaw:%.2f, bat:%.2f',targetDrone.pose.position.x, targetDrone.pose.position.y,targetDrone.pose.position.z,euler[2],self.lastNavdata.batteryPercent)
                 rospy.loginfo('Control:%.2f,%.2f,%.2f,%.2f',msg.linear.x, msg.linear.y,msg.linear.z,msg.angular.z)
                 rospy.loginfo('Current goal:%.2f,%.2f,%.2f,%.2f',goal[0], goal[1],goal[2],goal[3])
+                rospy.loginfo('Current pose:%.2f,%.2f,%.2f',self.current_pose.pose.position.x, self.current_pose.pose.position.x,self.current_pose.pose.position.x)
                 self.previousTime=time
                 if self.goal_done:
                     rospy.loginfo("Goal done.")
