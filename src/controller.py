@@ -21,6 +21,7 @@ class PID:
         self.minOutput = minOutput
         self.maxOutput = maxOutput
         self.integral = 0.0
+        self.anti_windup = 1
         self.previousError = 0.0
         self.previousTime = rospy.get_time()
         self.pubOutput = rospy.Publisher('pid/output/' + name, Float32, queue_size=1)
@@ -31,6 +32,13 @@ class PID:
         dt = time - self.previousTime
         error = targetValue - value
         self.integral += error * dt
+
+        # We need anti windup here
+        if self.integral < -self.anti_windup:
+            self.integral = -self.anti_windup
+        elif self.integral > self.anti_windup:
+            self.integral = self.anti_windup
+
         output = self.kp * error + self.kd * (error - self.previousError) / dt + self.ki * self.integral
         self.previousError = error
         self.previousTime = time
@@ -284,9 +292,8 @@ class Controller():
                     rospy.loginfo("Goal done.")
 
 
-
-            if (math.fabs(targetDrone.pose.position.x) < 0.1
-                and math.fabs(targetDrone.pose.position.y) < 0.1
+            error_xy = math.sqrt(targetDrone.pose.postion.x**2+targetDrone.pose.position.y**2)
+            if (error_xy < 0.2
                 and math.fabs(targetDrone.pose.position.z) < 0.2
                 and math.fabs(euler[2]) < math.radians(5)):
                 self.goal_done = True
