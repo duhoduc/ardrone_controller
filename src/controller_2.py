@@ -59,7 +59,7 @@ class Controller():
         rospy.Subscriber("ardrone/navdata", Navdata, self.on_navdata)
         self.pubTakeoff = rospy.Publisher('ardrone/takeoff', Empty, queue_size=1)
         self.pubLand = rospy.Publisher('ardrone/land', Empty, queue_size=1)
-        self.pubNav = rospy.Publisher('cmd_vel', Twist, queue_size=1)
+        self.pubCmd = rospy.Publisher('cmd_vel', Twist, queue_size=1)
         self.setFlightAnimation = rospy.ServiceProxy('ardrone/setflightanimation', FlightAnim)
 
         self.listener = TransformListener()
@@ -93,7 +93,7 @@ class Controller():
         msg = Twist()
         for i in range(0, 1000):
             self.pubLand.publish()
-            self.pubNav.publish(msg)
+            self.pubCmd.publish(msg)
         rospy.sleep(1)
 
     def run(self):
@@ -105,7 +105,7 @@ class Controller():
                     self.action = Controller.ActionHover
             elif self.action == Controller.ActionLand:
                 msg = Twist()
-                self.pubNav.publish(msg)
+                self.pubCmd.publish(msg)
                 self.pubLand.publish()
             elif self.action == Controller.ActionHover:
                 rospy.loginfo('pid running')
@@ -142,7 +142,7 @@ class Controller():
                     msg.angular.z = self.pidYaw.update(0.0, euler[2])
                     # disable hover mode
                     msg.angular.x = 1
-                    self.pubNav.publish(msg)
+                    self.pubCmd.publish(msg)
 
                     if (math.fabs(targetDrone.pose.position.x) < 0.2
                         and math.fabs(targetDrone.pose.position.y) < 0.2
@@ -153,11 +153,11 @@ class Controller():
                             if type(self.goals[self.goalIndex]) is str:
                                 msg = Twist()
                                 for i in range(0, 1000):
-                                    self.pubNav.publish(msg)
+                                    self.pubCmd.publish(msg)
                                 self.setFlightAnimation(8, 0)
                                 rospy.sleep(1.0)
                                 #for i in range(0, 1000):
-                                #    self.pubNav.publish(msg)
+                                #    self.pubCmd.publish(msg)
                                 #rospy.sleep(1.5)
                                 self.goalIndex += 1
                             rospy.loginfo("Next Goal (X,Y,Z,Yaw): " + str(self.goals[self.goalIndex]))

@@ -59,6 +59,7 @@ def talker():
     wp_msg = Waypoints()
     rospy.loginfo(wp_msg)
     pubLand = rospy.Publisher('ardrone/land', Empty, queue_size=10)
+    pubCmd = rospy.Publisher('cmd_vel', Twist, queue_size=1)
 
     rospy.init_node('talker', anonymous=True)
     rate = rospy.Rate(10) # 10hz
@@ -90,7 +91,7 @@ def talker():
             goal.z = goals[3][2]
             goal.yaw = goals[3][3]
             pubGoal.publish(goal)
-        elif choice == 5:
+        elif choice == '5':
             goal.x = goals[4][0]
             goal.y = goals[4][1]
             goal.z = goals[4][2]
@@ -126,9 +127,13 @@ def talker():
             wp_msg.len = len(wp_ref)
             #rospy.loginfo(wp_msg)
             pubWaypoints.publish(wp_msg)
+        elif choice == '8': # Landing
+            msg = Twist()
+            pubCmd.publish(msg)
+            pubLand.publish()
         else:
             pass
-        rospy.sleep(0.1)
+        rospy.sleep()
 
 if __name__ == '__main__':
     try:

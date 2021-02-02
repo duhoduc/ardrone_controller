@@ -68,7 +68,7 @@ class Controller():
         rospy.Subscriber("qualisys/ARDrone",PoseStamped,self.get_current_pose)
         self.pubTakeoff = rospy.Publisher('ardrone/takeoff', Empty, queue_size=1)
         self.pubLand = rospy.Publisher('ardrone/land', Empty, queue_size=1)
-        self.pubNav = rospy.Publisher('cmd_vel', Twist, queue_size=1)
+        self.pubCmd = rospy.Publisher('cmd_vel', Twist, queue_size=1)
         self.setFlightAnimation = rospy.ServiceProxy('ardrone/setflightanimation', FlightAnim)
 
         self.listener = TransformListener()
@@ -81,6 +81,7 @@ class Controller():
         self.pidZ = PID(1.0, 0.1, 0.25, -1.0, 1.0, "z")
         self.pidYaw = PID(0.5, 0.15, 0.0, -0.6, 0.6, "yaw")
         self.scale = 0.5
+        self.cmd_freq = 1/400
 
         # X, Y, Z, Yaw
         #self.goals = [
@@ -112,7 +113,7 @@ class Controller():
         msg = Twist()
         for i in range(0, 1000):
             self.pubLand.publish()
-            self.pubNav.publish(msg)
+            self.pubCmd.publish(msg)
         rospy.sleep(1)
 
     def on_goal(self,data):
@@ -123,7 +124,7 @@ class Controller():
     def on_waypoints(self,data):
         rospy.loginfo('New waypoints.')
         self.waypoints = []
-        for d in range(0,data.len):
+        for d in range(data.len):
             self.waypoints.append([data.waypoints[d].x, data.waypoints[d].y, data.waypoints[d].z, data.waypoints[d].yaw])
         rospy.loginfo(self.waypoints)
 
@@ -141,6 +142,8 @@ class Controller():
             targetWorld = PoseStamped()
             t = self.listener.getLatestCommonTime("/ARDrone", "/mocap")
             if self.listener.canTransform("/ARDrone", "/mocap", t):
+                # Get starting time
+                startCmdTime = rospy.get_time()
                 targetWorld.header.stamp = t
                 targetWorld.header.frame_id = "mocap"
                 targetWorld.pose.position.x = self.goal[0]
@@ -191,13 +194,14 @@ class Controller():
                 msg.angular.z = self.pidYaw.update(0.0, euler[2])
                 # disable hover mode
                 msg.angular.x = 0
-                self.pubNav.publish(msg)
+                self.pubCmd.publish(msg)
 
                 time = rospy.get_time()
                 if time-self.previousTime>1:
                 #log_msg = "Current pos:" + [targetDrone.pose.position.x, targetDrone.pose.position.y,targetDrone.pose.position.z]
                     rospy.loginfo('Current pos: x:%.2f, y:%.2f, z:%.2f, yaw:%.2f, bat:%.2f',targetDrone.pose.position.x,targetDrone.pose.position.y,targetDrone.pose.position.z,euler[2],self.lastNavdata.batteryPercent)
-                    rospy.loginfo('COntrol:%.2f,%.2f,%.2f,%.2f',msg.linear.x, msg.linear.y,msg.linear.z,msg.angular.z)
+                    rospy.loginfo('Control:%.2f,%.2f,%.2f,%.2f',msg.linear.x, msg.linear.y,msg.linear.z,msg.angular.z)
+                    rospy.loginfo('Current goal:%.2f,%.2f,%.2f,%.2f',goal[0], goal[1],goal[2],goal[3])
                     self.previousTime =time
 
                 if (math.fabs(targetDrone.pose.position.x) < 0.1
@@ -207,9 +211,14 @@ class Controller():
                         
                     if (index < len(points)-1):
                         index += 1                             
-                        self.goal = points[index] 
+                        self.goal = points[index]
                     else:
                         return
+
+                # Check time duration and sleep
+                durationCmd = self.cmd_freq-(rospy.get_time() - startCmdTime)
+                if durationCmd>0: # Meaning the execution < cmd_freq
+                    rospy.sleep(durationCmd)
                         
 
 
@@ -219,8 +228,13 @@ class Controller():
         self.goal = goal
         # transform target world coordinates into local coordinates
         targetWorld = PoseStamped()
+
+
         t = self.listener.getLatestCommonTime("/ARDrone", "/mocap")
         if self.listener.canTransform("/ARDrone", "/mocap", t):
+            # Get starting time
+            startCmdTime = rospy.get_time()
+
             targetWorld.header.stamp = t
             targetWorld.header.frame_id = "mocap"
             targetWorld.pose.position.x = goal[0]
@@ -257,14 +271,15 @@ class Controller():
             msg.angular.z = self.pidYaw.update(0.0, euler[2])
             # disable hover mode
             msg.angular.x = 0
-            self.pubNav.publish(msg)
+            self.pubCmd.publish(msg)
 
             time = rospy.get_time()
             if time-self.previousTime>1:
                 #log_msg = "Current pos:" + [targetDrone.pose.position.x, targetDrone.pose.position.y,targetDrone.pose.position.z]
-                rospy.loginfo('Current pos: x:%.2f, y:%.2f, z:%.2f, yaw:%.2f, bat:%.2f',targetDrone.pose.position.x, targetDrone.pose.position.y,targetDrone.pose.position.z,euler[2],self.lastNavdata.batteryPercent)
-                rospy.loginfo('COntrol:%.2f,%.2f,%.2f,%.2f',msg.linear.x, msg.linear.y,msg.linear.z,msg.angular.z)
-                self.previousTime =time
+                rospy.loginfo('Current distance to goal: x:%.2f, y:%.2f, z:%.2f, yaw:%.2f, bat:%.2f',targetDrone.pose.position.x, targetDrone.pose.position.y,targetDrone.pose.position.z,euler[2],self.lastNavdata.batteryPercent)
+                rospy.loginfo('Control:%.2f,%.2f,%.2f,%.2f',msg.linear.x, msg.linear.y,msg.linear.z,msg.angular.z)
+                rospy.loginfo('Current goal:%.2f,%.2f,%.2f,%.2f',goal[0], goal[1],goal[2],goal[3])
+                self.previousTime=time
                 if self.goal_done:
                     rospy.loginfo("Goal done.")
 
@@ -278,7 +293,11 @@ class Controller():
                 #rospy.loginfo("Goal done.") 
                 #time = rospy.get_time()
                 #if time-self.previousTime>1:
-                #	rospy.loginfo("Goal done.")           
+                #	rospy.loginfo("Goal done.")
+            # Check time duration and sleep
+            durationCmd = self.cmd_freq-(rospy.get_time() - startCmdTime)
+            if durationCmd>0: # Meaning the execution < cmd_freq
+                rospy.sleep(durationCmd)
 
 
     def run(self):
@@ -291,7 +310,7 @@ class Controller():
                     self.action = Controller.ActionHover
             elif self.action == Controller.ActionLand:
                 msg = Twist()
-                self.pubNav.publish(msg)
+                self.pubCmd.publish(msg)
                 self.pubLand.publish()
             elif self.action == Controller.ActionHover:
                 if self.waypoints == None:
