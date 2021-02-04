@@ -52,6 +52,8 @@ wp_ref_0 = [[5, 1.5, 0, height, yaw_ref],
         [150, -1.5, 0, height, -yaw_ref],
         [160, 0, 0, height, 0.0]]
 
+# Need to read from text file the path, do it tomorrow
+
 def talker():
     pubGoal = rospy.Publisher('arcontroller/goal', Goal, queue_size=10)
     pubWaypoints = rospy.Publisher('arcontroller/waypoints', Waypoints, queue_size=10)
@@ -60,13 +62,14 @@ def talker():
     wp_msg = Waypoints()
     rospy.loginfo(wp_msg)
     pubLand = rospy.Publisher('ardrone/land', Empty, queue_size=10)
+    pubTakeoff = rospy.Publisher('ardrone/takeoff', Empty, queue_size=1)
     pubCmd = rospy.Publisher('cmd_vel', Twist, queue_size=1)
     pubReset = rospy.Publisher('ardrone/reset', Empty, queue_size=1)
 
     rospy.init_node('talker', anonymous=True)
     rate = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
-        choice = raw_input('Choose a goal: (1)Center, (2)Front, (3)back, (4)right, (5)Left, (6)yaw waypoints, (7)0 yaw waypoints, (8): landing, (9) Reset \n')
+        choice = raw_input('Choose a goal: (1)Center, (2)Front, (3)back, (4)right, (5)Left, (6)yaw waypoints, (7)0 yaw waypoints, (8): landing, (9) takeoff, (0) Reset \n')
         if choice == '1':
             goal.t = -1
             goal.x = goals[0][0]
@@ -141,6 +144,8 @@ def talker():
             pubCmd.publish(msg)
             pubLand.publish()
         elif choice == '9':
+            pubTakeoff.publish()
+        elif choice == '0':
             msg = Empty
             pubReset.publish(msg)
         else:

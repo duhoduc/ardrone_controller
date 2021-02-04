@@ -53,7 +53,7 @@ class State():
     Inited = 1
     Landed = 2
     Flying = 3
-    Flying2 = 7
+    Flying2 = 7 # gotohover
     Hovering = 4
     Test = 5
     TakingOff = 6
@@ -74,6 +74,9 @@ class Controller():
         self.current_pose = None
         self.current_odom = None
         self.lastState = State.Unknown
+        self.command = Twist()
+        self.cmd_freq = 1.0/400.0
+
         rospy.on_shutdown(self.on_shutdown)
         rospy.Subscriber("ardrone/navdata", Navdata, self.on_navdata)
         rospy.Subscriber("ardrone/imu", Imu, self.on_imu)
@@ -88,6 +91,8 @@ class Controller():
         self.pubDroneData = rospy.Publisher('droneData', ARDroneData, queue_size=1)
         self.setFlightAnimation = rospy.ServiceProxy('ardrone/setflightanimation', FlightAnim)
 
+        self.commandTimer = rospy.Timer(rospy.Duration(self.cmd_freq),self.sendCommand)
+
         self.listener = TransformListener()
         self.action = Controller.ActionTakeOff
         self.previousDebugTime = rospy.get_time()
@@ -97,8 +102,8 @@ class Controller():
         self.pidY = PID(0.5, 0.12, 0.0, -1, 1, "y")
         self.pidZ = PID(1.0, 0.1, 0.25, -1.0, 1.0, "z")
         self.pidYaw = PID(0.5, 0.15, 0.0, -0.6, 0.6, "yaw")
-        self.scale = 0.5
-        self.cmd_freq = 1/400
+        self.scale = 1.0
+        
 
         self.goal = [-1,0,0,height,0] #set it to center to start
         self.goal_done = False
@@ -134,6 +139,9 @@ class Controller():
         rospy.loginfo('New goal.')
         self.goal = [data.t, data.x,data.y,data.z,data.yaw]
         self.goal_done = False
+
+    def sendCommand(self)
+        self.pubCmd.publish(self.command)
 
     def on_waypoints(self,data):
         rospy.loginfo('New waypoints.')
@@ -185,25 +193,12 @@ class Controller():
                 msg = Twist()
                 msg.linear.x = self.scale*self.pidX.update(0.0, targetDrone.pose.position.x)
                 msg.linear.y = self.scale*self.pidY.update(0.0, targetDrone.pose.position.y)
-
-                # # Do not stop when pass a waypoint
-                # if (index != len(points)-1):
-                #     if (math.fabs(msg.linear.x) < minX) :
-                #         if (msg.linear.x < 0) :
-                #             msg.linear.x = -minX
-                #         elif (msg.linear.x > 0):
-                #             msg.linear.x = minX
-                #     if (math.fabs(msg.linear.y) < minY) :
-                #         if (msg.linear.y < 0) :
-                #             msg.linear.y = -minY
-                #         elif (msg.linear.y > 0):
-                #             msg.linear.y = minY
-
                 msg.linear.z = self.pidZ.update(0.0, targetDrone.pose.position.z)
                 msg.angular.z = self.pidYaw.update(0.0, euler[2])
                 # disable hover mode
                 msg.angular.x = 0
-                self.pubCmd.publish(msg)
+                self.command = msg
+                #self.pubCmd.publish(msg)
 
 
                 # WE define the drone data message and publish
@@ -219,15 +214,14 @@ class Controller():
                 drone_msg.cmd = msg
                 self.pubDroneData.publish(drone_msg)
 
-
+                error_xy = math.sqrt(targetDrone.pose.position.x**2+targetDrone.pose.position.y**2)
                 current_time_wp = rospy.get_time()
                 if self.goal[0] < 0: #-1 implying that waypoints is not time-dependent
                     # goal t, x, y, z, yaw
                     #self.goal = points[index]
-                    if (math.fabs(targetDrone.pose.position.x) < 0.1
-                    and math.fabs(targetDrone.pose.position.y) < 0.1
+                    if (error_xy < 0.2
                     and math.fabs(targetDrone.pose.position.z) < 0.2
-                    and math.fabs(euler[2]) < math.radians(10)):
+                    and math.fabs(euler[2]) < math.radians(5)):
                         
                         if (index < len(points)-1):
                             index += 1                             
@@ -250,6 +244,7 @@ class Controller():
                     rospy.loginfo('Control:%.2f,%.2f,%.2f,%.2f | bat: %.2f',msg.linear.x, msg.linear.y,msg.linear.z,msg.angular.z,self.lastNavdata.batteryPercent)
                     rospy.loginfo('Current position: [%.2f, %.2f, %.2f, %.2f, %.2f]',diff_time_wp, self.current_pose.pose.position.x,self.current_pose.pose.position.y,self.current_pose.pose.position.z,euler[2])
                     rospy.loginfo('Current goal:%.2f,%.2f,%.2f,%.2f,%.2f',self.goal[0], self.goal[1], self.goal[2], self.goal[3], self.goal[4])
+                    rospy.loginfo('Error: %.2f,%.2f,%.2f', error_xy, math.fabs(targetDrone.pose.position.z), math.fabs(euler[2]))
                     rospy.loginfo('--------------------------------------')
                     self.previousDebugTime = current_time_wp
 
@@ -265,9 +260,9 @@ class Controller():
                 #         return
 
                 # Check time duration and sleep
-                durationCmd = self.cmd_freq-(rospy.get_time() - startCmdTime)
-                if durationCmd>0: # Meaning the execution < cmd_freq
-                    rospy.sleep(durationCmd)
+                # durationCmd = self.cmd_freq-(rospy.get_time() - startCmdTime)
+                # if durationCmd>0: # Meaning the execution < cmd_freq
+                #     rospy.sleep(durationCmd)
                         
 
 
@@ -309,23 +304,17 @@ class Controller():
             scale = 0.4
             msg.linear.x = self.scale*self.pidX.update(0.0, targetDrone.pose.position.x)
             msg.linear.y = self.scale*self.pidY.update(0.0, targetDrone.pose.position.y)
-
-            #pid_x = scale*self.pidX.update(0.0, targetDrone.pose.position.x)
-            #pid_y = scale*self.pidY.update(0.0, targetDrone.pose.position.y)
-            #true_yaw = goal[3]-euler[2]
-            #msg.linear.x = math.cos(true_yaw)*pid_x + math.sin(true_yaw)*pid_y
-            #msg.linear.y = -math.sin(true_yaw)*pid_x + math.cos(true_yaw)*pid_y
-
             msg.linear.z = self.pidZ.update(0.0, targetDrone.pose.position.z)
             msg.angular.z = self.pidYaw.update(0.0, euler[2])
             # disable hover mode
             msg.angular.x = 0
-            self.pubCmd.publish(msg)
+            #self.pubCmd.publish(msg)
+            self.command = msg
 
             # WE define the drone data message and publish
             drone_msg = ARDroneData()
             
-            drone_msg.header.stamp = t
+            drone_msg.header.stamp = rospy.get_rostime()
             drone_msg.header.frame_id = 'drone_data'
             drone_msg.navdata = self.lastNavdata
             drone_msg.imu = self.lastImu
@@ -348,9 +337,6 @@ class Controller():
                 if self.goal_done:
                     rospy.loginfo("Goal done.")
                 rospy.loginfo('-------------------------------------')
-
-
-
             
             if (error_xy < 0.2 and math.fabs(targetDrone.pose.position.z) < 0.2 and math.fabs(euler[2]) < math.radians(5)):
                 self.goal_done = True
@@ -360,9 +346,9 @@ class Controller():
                 #if time-self.previousDebugTime>1:
                 #	rospy.loginfo("Goal done.")
             # Check time duration and sleep
-            durationCmd = self.cmd_freq-(rospy.get_time() - startCmdTime)
-            if durationCmd>0: # Meaning the execution < cmd_freq
-                rospy.sleep(durationCmd)
+            # durationCmd = self.cmd_freq-(rospy.get_time() - startCmdTime)
+            # if durationCmd>0: # Meaning the execution < cmd_freq
+            #     rospy.sleep(durationCmd)
 
 
     def run(self):
@@ -370,7 +356,7 @@ class Controller():
             if self.action == Controller.ActionTakeOff:
                 if self.lastState == State.Landed:
                     #rospy.loginfo('Taking off.')
-                    self.pubTakeoff.publish()
+                    #self.pubTakeoff.publish()
                 elif self.lastState == State.Hovering or self.lastState == State.Flying or self.lastState == State.Flying2:
                     self.action = Controller.ActionHover
             elif self.action == Controller.ActionLand:
