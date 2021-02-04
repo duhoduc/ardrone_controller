@@ -2,6 +2,7 @@
 import rospy
 from ardrone_controller.msg import Goal, Waypoints
 from std_msgs.msg import Empty, Float32, Float32MultiArray
+from geometry_msgs.msg import Twist
 
 height =  1.0
 yaw_ref = 0.5
@@ -109,7 +110,7 @@ def talker():
             #rospy.loginfo(type(wp_msg.waypoints))
             for t in range(len(wp_ref)):
                 goal = Goal()
-                goal.t = wp_ref[t][0]
+                goal.t = wp_ref[t][0]*0.5
                 goal.x = wp_ref[t][1]
                 goal.y = wp_ref[t][2]
                 goal.z = wp_ref[t][3]
@@ -125,7 +126,7 @@ def talker():
             #rospy.loginfo(type(wp_msg.waypoints))
             for t in range(len(wp_ref_0)):
                 goal = Goal()
-                goal.t = wp_ref_0[t][0]
+                goal.t = wp_ref_0[t][0]*0.5
                 goal.x = wp_ref_0[t][1]
                 goal.y = wp_ref_0[t][2]
                 goal.z = wp_ref_0[t][3]
@@ -139,12 +140,12 @@ def talker():
             msg = Twist()
             pubCmd.publish(msg)
             pubLand.publish()
-        elif choise == '9':
+        elif choice == '9':
             msg = Empty
             pubReset.publish(msg)
         else:
             pass
-        rospy.sleep()
+        rospy.sleep(0.01)
 
 if __name__ == '__main__':
     try:

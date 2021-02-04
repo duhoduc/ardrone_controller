@@ -7,6 +7,8 @@ project(ardrone_controller)
 find_package(catkin REQUIRED COMPONENTS 
     std_msgs
     geometry_msgs
+    sensor_msgs
+    nav_msgs
     tf
     ardrone_autonomy
     message_generation
@@ -49,6 +51,7 @@ catkin_python_setup()
  add_message_files(FILES
    Goal.msg
    Waypoints.msg
+   ARDroneData.msg
  )
 
 ## Generate services in the 'srv' folder
@@ -67,9 +70,11 @@ catkin_python_setup()
 
 ## Generate added messages and services with any dependencies listed here
  generate_messages(DEPENDENCIES
-   #ardrone_autonomy
-   #std_msgs  # Or other packages containing msgs
-   #geometry_msgs
+   ardrone_autonomy
+   std_msgs  # Or other packages containing msgs
+   geometry_msgs
+   nav_msgs
+   sensor_msgs
 )
 
 ###################################
