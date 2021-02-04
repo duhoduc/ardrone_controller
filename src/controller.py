@@ -70,6 +70,7 @@ class Controller():
         self.lastImu = None
         self.lastMag = None
         self.current_pose = None
+        self.current_odom = None
         self.lastState = State.Unknown
         rospy.on_shutdown(self.on_shutdown)
         rospy.Subscriber("ardrone/navdata", Navdata, self.on_navdata)
@@ -102,6 +103,7 @@ class Controller():
 
     def get_current_pose(self,data):
         self.current_pose = data.pose
+        self.current_odom = data.odom
 
     def on_imu(self, data):
         self.lastImu = data
