@@ -66,8 +66,8 @@ def talker():
     pubCmd = rospy.Publisher('cmd_vel', Twist, queue_size=1)
     pubReset = rospy.Publisher('ardrone/reset', Empty, queue_size=1)
 
-    with open('squarePath.txt') as f:
-        paths = = f.read().splitlines()
+    with open('/home/duho46/catkin_ws/src/ardrone_controller/src/squarePath.txt') as f:
+        paths = f.read().splitlines()
     f.close()
     path_list = [path.split(',') for path in paths]
     wp_square = [[float(x) for x in y] for y in path_list]
@@ -75,7 +75,7 @@ def talker():
     rospy.init_node('talker', anonymous=True)
     rate = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
-        choice = raw_input('Goal: (1)Center, (2)Front, (3)back, (4)right, (5)Left, (6)yaw waypoints, (7)0 yaw waypoints, (8), square, (l): landing, (t) takeoff, (r) Reset \n')
+        choice = raw_input('Goal: (1)Center, (2)Front, (3)back, (4)right, (5)Left, (6)yaw waypoints, (7)0 yaw waypoints, (8),to square, (9) square, (l): landing, (t) takeoff, (r) Reset \n')
         if choice == '1':
             goal.t = -1
             goal.x = goals[0][0]
@@ -126,7 +126,7 @@ def talker():
                 goal.yaw = wp_ref[t][4]
                 wp_msg.waypoints.append(goal)
                 #rospy.loginfo(goal)wp_msg
-            wp_msg.len = len(wp_msg)
+            wp_msg.len = len(wp_ref)
             #rospy.loginfo(wp_msg)
             pubWaypoints.publish(wp_msg)
         elif choice == '7':
@@ -142,20 +142,28 @@ def talker():
                 goal.yaw = wp_ref_0[t][4]
                 wp_msg.waypoints.append(goal)
                 #rospy.loginfo(goal)wp_msg
-            wp_msg.len = len(wp_msg)
+            wp_msg.len = len(wp_ref_0)
             #rospy.loginfo(wp_msg)
             pubWaypoints.publish(wp_msg)
         elif choice == '8':
+            goal = Goal()
+            goal.t = -1
+            goal.x = wp_square[0][1]
+            goal.y = wp_square[0][2]
+            goal.z = wp_square[0][3]
+            goal.yaw = wp_square[0][4]
+            pubGoal.publish(goal)
+        elif choice == '9':
             wp_msg = Waypoints()
             for wp in wp_square:
                 goal = Goal()
-                goal.t = wp[0]
+                goal.t = wp[0]*0.5
                 goal.x = wp[1]
                 goal.y = wp[2]
                 goal.z = wp[3]
                 goal.yaw = wp[4]
                 wp_msg.waypoints.append(goal)
-            wp_msg.len = len(wp_msg)
+            wp_msg.len = len(wp_square)
             pubWaypoints.publish(wp_msg)
         elif choice == 'l': # Landing
             msg = Twist()
@@ -164,7 +172,7 @@ def talker():
         elif choice == 't':
             pubTakeoff.publish()
         elif choice == 'r':
-            msg = Empty
+            msg = Empty()
             pubReset.publish(msg)
         else:
             pass

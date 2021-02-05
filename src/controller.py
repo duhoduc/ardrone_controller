@@ -79,6 +79,22 @@ class Controller():
         self.cmd_freq = 1.0/200.0
         self.drone_freq = 1.0/200.0
 
+        self.action = Controller.ActionTakeOff
+        self.previousDebugTime = rospy.get_time()
+		
+        self.pose_error = [0,0,0,0]
+        self.pidX = PID(0.2, 0.05, 0.0, -1, 1, "x")
+        self.pidY = PID(0.2, 0.05, 0.0, -1, 1, "y")
+        self.pidZ = PID(0.75, 0.1, 0.25, -1.0, 1.0, "z")
+        self.pidYaw = PID(0.5, 0.05, 0.1, -0.9, 0.9, "yaw")
+        self.scale = 1.0
+        
+
+        self.goal = [-1,0,0,height,0] #set it to center to start
+        self.current_goal = Goal() # Use this to store current goal, reference time-dependent
+        self.goal_done = False
+        self.waypoints = None
+
         rospy.on_shutdown(self.on_shutdown)
         rospy.Subscriber("ardrone/navdata", Navdata, self.on_navdata)
         rospy.Subscriber("ardrone/imu", Imu, self.on_imu)
@@ -99,21 +115,7 @@ class Controller():
         #self.goalTimer = rospy.Timer(rospy.Duration(self.drone_freq),self.sendCurrentGoal)
 
         self.listener = TransformListener()
-        self.action = Controller.ActionTakeOff
-        self.previousDebugTime = rospy.get_time()
-		
-        self.pose_error = [0,0,0,0]
-        self.pidX = PID(0.5, 0.12, 0.0, -1, 1, "x")
-        self.pidY = PID(0.5, 0.12, 0.0, -1, 1, "y")
-        self.pidZ = PID(1.0, 0.1, 0.25, -1.0, 1.0, "z")
-        self.pidYaw = PID(0.5, 0.15, 0.0, -0.6, 0.6, "yaw")
-        self.scale = 1.0
         
-
-        self.goal = [-1,0,0,height,0] #set it to center to start
-        self.current_goal = Goal() # Use this to store current goal, reference time-dependent
-        self.goal_done = False
-        self.waypoints = None
 
     def get_current_pose(self,data):
         self.current_pose = data
@@ -135,10 +137,10 @@ class Controller():
 
     def on_shutdown(self):
         rospy.loginfo("Shutdown: try to land...")
-        msg = Twist()
+        self.command = Twist()
         for i in range(0, 1000):
             self.pubLand.publish()
-            self.pubCmd.publish(msg)
+            self.pubCmd.publish(self.command)
         rospy.sleep(1)
 
     def on_goal(self,data):
@@ -146,7 +148,7 @@ class Controller():
         self.goal = [data.t, data.x,data.y,data.z,data.yaw]
         self.goal_done = False
 
-    def sendCommand(self, event = None)
+    def sendCommand(self, event = None):
         self.command.linear.x = self.scale*self.pidX.update(0.0, self.pose_error[0])
         self.command.linear.y = self.scale*self.pidY.update(0.0, self.pose_error[1])
         self.command.linear.z = self.pidZ.update(0.0, self.pose_error[2])
@@ -155,7 +157,7 @@ class Controller():
         self.pubCmd.publish(self.command)
 
     def sendDroneData(self, event = None):
-    	#self.drone_msg = ARDroneData()
+    	self.drone_msg = ARDroneData()
             
         self.drone_msg.header.stamp = rospy.get_rostime()
         self.drone_msg.header.frame_id = 'drone_data'
@@ -173,6 +175,7 @@ class Controller():
         self.pubDroneData.publish(self.drone_msg)
 
     def sendCurrentGoal(self, event = None):
+	self.current_goal = Goal()
     	self.current_goal.t = rospy.get_time()
     	self.current_goal.x = self.goal[1]
     	self.current_goal.y = self.goal[2]
@@ -280,7 +283,7 @@ class Controller():
                 if diff_time_log > 0.5:
                 #log_msg = "Current pos:" + [targetDrone.pose.position.x, targetDrone.pose.position.y,targetDrone.pose.position.z]
                     rospy.loginfo('--------------------------------------')
-                    rospy.loginfo('Control:%.2f,%.2f,%.2f,%.2f | bat: %.2f',msg.linear.x, msg.linear.y,msg.linear.z,msg.angular.z,self.lastNavdata.batteryPercent)
+                    rospy.loginfo('Control:%.2f,%.2f,%.2f,%.2f | bat: %.2f',self.command.linear.x, self.command.linear.y,self.command.linear.z,self.command.angular.z,self.lastNavdata.batteryPercent)
                     rospy.loginfo('Current position: [%.2f, %.2f, %.2f, %.2f, %.2f]',diff_time_wp, self.current_pose.pose.position.x,self.current_pose.pose.position.y,self.current_pose.pose.position.z,euler[2])
                     rospy.loginfo('Current goal:%.2f,%.2f,%.2f,%.2f,%.2f',self.goal[0], self.goal[1], self.goal[2], self.goal[3], self.goal[4])
                     rospy.loginfo('Error: %.2f,%.2f,%.2f', error_xy, math.fabs(targetDrone.pose.position.z), math.fabs(euler[2]))
@@ -346,7 +349,7 @@ class Controller():
             if time-self.previousDebugTime>1:
                 #log_msg = "Current pos:" + [targetDrone.pose.position.x, targetDrone.pose.position.y,targetDrone.pose.position.z]
                 rospy.loginfo('--------------------------------------')
-                rospy.loginfo('Control:%.2f,%.2f,%.2f,%.2f,bat:%.2f',msg.linear.x,msg.linear.y,msg.linear.z,msg.angular.z,self.lastNavdata.batteryPercent)
+                rospy.loginfo('Control:%.2f,%.2f,%.2f,%.2f,bat:%.2f',self.command.linear.x,self.command.linear.y,self.command.linear.z,self.command.angular.z,self.lastNavdata.batteryPercent)
                 rospy.loginfo('Current goal:%.2f,%.2f,%.2f,%.2f',goal[1], goal[2],goal[3],goal[4])
                 rospy.loginfo('Current pose:%.2f,%.2f,%.2f',self.current_pose.pose.position.x, self.current_pose.pose.position.y,self.current_pose.pose.position.z)
                 rospy.loginfo('Error: %.2f,%.2f,%.2f', error_xy, math.fabs(targetDrone.pose.position.z), math.fabs(euler[2]))
@@ -365,6 +368,7 @@ class Controller():
         while not rospy.is_shutdown():
             if self.action == Controller.ActionTakeOff:
                 if self.lastState == State.Landed:
+                    pass
                     #rospy.loginfo('Taking off.')
                     #self.pubTakeoff.publish()
                 elif self.lastState == State.Hovering or self.lastState == State.Flying or self.lastState == State.Flying2:
