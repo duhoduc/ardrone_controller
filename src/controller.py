@@ -75,7 +75,9 @@ class Controller():
         self.current_odom = None
         self.lastState = State.Unknown
         self.command = Twist()
-        self.cmd_freq = 1.0/400.0
+        self.drone_msg = ARDroneData()
+        self.cmd_freq = 1.0/200.0
+        self.drone_freq = 1.0/200.0
 
         rospy.on_shutdown(self.on_shutdown)
         rospy.Subscriber("ardrone/navdata", Navdata, self.on_navdata)
@@ -89,15 +91,18 @@ class Controller():
         self.pubLand = rospy.Publisher('ardrone/land', Empty, queue_size=1)
         self.pubCmd = rospy.Publisher('cmd_vel', Twist, queue_size=1)
         self.pubDroneData = rospy.Publisher('droneData', ARDroneData, queue_size=1)
+        self.pubGoal = rospy.Publisher('current_goal', Goal, queue_size=1)
         self.setFlightAnimation = rospy.ServiceProxy('ardrone/setflightanimation', FlightAnim)
 
         self.commandTimer = rospy.Timer(rospy.Duration(self.cmd_freq),self.sendCommand)
+        self.droneDataTimer = rospy.Timer(rospy.Duration(self.drone_freq),self.sendDroneData)
+        #self.goalTimer = rospy.Timer(rospy.Duration(self.drone_freq),self.sendCurrentGoal)
 
         self.listener = TransformListener()
         self.action = Controller.ActionTakeOff
         self.previousDebugTime = rospy.get_time()
 		
-
+        self.pose_error = [0,0,0,0]
         self.pidX = PID(0.5, 0.12, 0.0, -1, 1, "x")
         self.pidY = PID(0.5, 0.12, 0.0, -1, 1, "y")
         self.pidZ = PID(1.0, 0.1, 0.25, -1.0, 1.0, "z")
@@ -106,6 +111,7 @@ class Controller():
         
 
         self.goal = [-1,0,0,height,0] #set it to center to start
+        self.current_goal = Goal() # Use this to store current goal, reference time-dependent
         self.goal_done = False
         self.waypoints = None
 
@@ -140,8 +146,39 @@ class Controller():
         self.goal = [data.t, data.x,data.y,data.z,data.yaw]
         self.goal_done = False
 
-    def sendCommand(self)
+    def sendCommand(self, event = None)
+        self.command.linear.x = self.scale*self.pidX.update(0.0, self.pose_error[0])
+        self.command.linear.y = self.scale*self.pidY.update(0.0, self.pose_error[1])
+        self.command.linear.z = self.pidZ.update(0.0, self.pose_error[2])
+        self.command.angular.z = self.pidYaw.update(0.0, self.pose_error[3])
+
         self.pubCmd.publish(self.command)
+
+    def sendDroneData(self, event = None):
+    	#self.drone_msg = ARDroneData()
+            
+        self.drone_msg.header.stamp = rospy.get_rostime()
+        self.drone_msg.header.frame_id = 'drone_data'
+        self.drone_msg.navdata = self.lastNavdata
+        self.drone_msg.imu = self.lastImu
+        self.drone_msg.mag = self.lastMag
+        self.drone_msg.pose = self.current_pose
+        self.drone_msg.odom = self.current_odom
+        self.drone_msg.cmd = self.command
+        self.drone_msg.goal.t = rospy.get_time()
+        self.drone_msg.goal.x = self.goal[1]
+    	self.drone_msg.goal.y = self.goal[2]
+    	self.drone_msg.goal.z = self.goal[3]
+    	self.drone_msg.goal.yaw = self.goal[4]
+        self.pubDroneData.publish(self.drone_msg)
+
+    def sendCurrentGoal(self, event = None):
+    	self.current_goal.t = rospy.get_time()
+    	self.current_goal.x = self.goal[1]
+    	self.current_goal.y = self.goal[2]
+    	self.current_goal.z = self.goal[3]
+    	self.current_goal.yaw = self.goal[4]
+    	self.pubGoal.publish(self.current_goal)
 
     def on_waypoints(self,data):
         rospy.loginfo('New waypoints.')
@@ -189,30 +226,32 @@ class Controller():
                         targetDrone.pose.orientation.w)
                 euler = tf.transformations.euler_from_quaternion(quaternion)
 
+                # Define the pose_error to publish the command in fixed rate
+                self.pose_error = [targetDrone.pose.position.x, targetDrone.pose.position.y, targetDrone.pose.position.z, euler[2]]
                 # Run PID controller and send navigation message
-                msg = Twist()
-                msg.linear.x = self.scale*self.pidX.update(0.0, targetDrone.pose.position.x)
-                msg.linear.y = self.scale*self.pidY.update(0.0, targetDrone.pose.position.y)
-                msg.linear.z = self.pidZ.update(0.0, targetDrone.pose.position.z)
-                msg.angular.z = self.pidYaw.update(0.0, euler[2])
-                # disable hover mode
-                msg.angular.x = 0
-                self.command = msg
+                # msg = Twist()
+                # msg.linear.x = self.scale*self.pidX.update(0.0, targetDrone.pose.position.x)
+                # msg.linear.y = self.scale*self.pidY.update(0.0, targetDrone.pose.position.y)
+                # msg.linear.z = self.pidZ.update(0.0, targetDrone.pose.position.z)
+                # msg.angular.z = self.pidYaw.update(0.0, euler[2])
+                # # disable hover mode
+                # msg.angular.x = 0
+                # self.command = msg
                 #self.pubCmd.publish(msg)
 
 
-                # WE define the drone data message and publish
-                drone_msg = ARDroneData()
+                # # WE define the drone data message and publish
+                # drone_msg = ARDroneData()
                 
-                drone_msg.header.stamp = t
-                drone_msg.header.frame_id = 'drone_data'
-                drone_msg.navdata = self.lastNavdata
-                drone_msg.imu = self.lastImu
-                drone_msg.mag = self.lastMag
-                drone_msg.pose = self.current_pose
-                drone_msg.odom = self.current_odom
-                drone_msg.cmd = msg
-                self.pubDroneData.publish(drone_msg)
+                # drone_msg.header.stamp = rospy.get_rostime()
+                # drone_msg.header.frame_id = 'drone_data'
+                # drone_msg.navdata = self.lastNavdata
+                # drone_msg.imu = self.lastImu
+                # drone_msg.mag = self.lastMag
+                # drone_msg.pose = self.current_pose
+                # drone_msg.odom = self.current_odom
+                # drone_msg.cmd = msg
+                # self.pubDroneData.publish(drone_msg)
 
                 error_xy = math.sqrt(targetDrone.pose.position.x**2+targetDrone.pose.position.y**2)
                 current_time_wp = rospy.get_time()
@@ -299,30 +338,8 @@ class Controller():
                 targetDrone.pose.orientation.w)
             euler = tf.transformations.euler_from_quaternion(quaternion)
 
-            # Run PID controller and send navigation message
-            msg = Twist()
-            scale = 0.4
-            msg.linear.x = self.scale*self.pidX.update(0.0, targetDrone.pose.position.x)
-            msg.linear.y = self.scale*self.pidY.update(0.0, targetDrone.pose.position.y)
-            msg.linear.z = self.pidZ.update(0.0, targetDrone.pose.position.z)
-            msg.angular.z = self.pidYaw.update(0.0, euler[2])
-            # disable hover mode
-            msg.angular.x = 0
-            #self.pubCmd.publish(msg)
-            self.command = msg
-
-            # WE define the drone data message and publish
-            drone_msg = ARDroneData()
-            
-            drone_msg.header.stamp = rospy.get_rostime()
-            drone_msg.header.frame_id = 'drone_data'
-            drone_msg.navdata = self.lastNavdata
-            drone_msg.imu = self.lastImu
-            drone_msg.mag = self.lastMag
-            drone_msg.pose = self.current_pose
-            drone_msg.odom = self.current_odom
-            drone_msg.cmd = msg
-            self.pubDroneData.publish(drone_msg)
+            # Define pose error to publish the command in fixed rate
+            self.pose_error = [targetDrone.pose.position.x, targetDrone.pose.position.y, targetDrone.pose.position.z, euler[2]]
 
             error_xy = math.sqrt(targetDrone.pose.position.x**2+targetDrone.pose.position.y**2)
             time = rospy.get_time()
@@ -342,13 +359,6 @@ class Controller():
                 self.goal_done = True
             else:
             	self.goal_done = False
-                #time = rospy.get_time()
-                #if time-self.previousDebugTime>1:
-                #	rospy.loginfo("Goal done.")
-            # Check time duration and sleep
-            # durationCmd = self.cmd_freq-(rospy.get_time() - startCmdTime)
-            # if durationCmd>0: # Meaning the execution < cmd_freq
-            #     rospy.sleep(durationCmd)
 
 
     def run(self):

@@ -5,3 +5,4 @@ geometry_msgs/Vector3Stamped mag
 geometry_msgs/PoseStamped pose
 nav_msgs/Odometry odom
 geometry_msgs/Twist cmd
+Goal goal
