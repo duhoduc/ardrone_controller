@@ -68,11 +68,11 @@ class Controller():
     
 
     def __init__(self):
-        self.lastNavdata = None
-        self.lastImu = None
-        self.lastMag = None
-        self.current_pose = None
-        self.current_odom = None
+        self.lastNavdata = Navdata()
+        self.lastImu = Imu()
+        self.lastMag = Vector3Stamped()
+        self.current_pose = PoseStamped()
+        self.current_odom = Odometry()
         self.lastState = State.Unknown
         self.command = Twist()
         self.drone_msg = ARDroneData()
@@ -83,10 +83,10 @@ class Controller():
         self.previousDebugTime = rospy.get_time()
 		
         self.pose_error = [0,0,0,0]
-        self.pidX = PID(0.2, 0.05, 0.0, -1, 1, "x")
-        self.pidY = PID(0.2, 0.05, 0.0, -1, 1, "y")
-        self.pidZ = PID(0.75, 0.1, 0.25, -1.0, 1.0, "z")
-        self.pidYaw = PID(0.5, 0.05, 0.1, -0.9, 0.9, "yaw")
+        self.pidX = PID(0.5, 0.1, 0.05, -1, 1, "x")
+        self.pidY = PID(0.5, 0.1, 0.05, -1, 1, "y")
+        self.pidZ = PID(1.25, 0.1, 0.25, -1.0, 1.0, "z")
+        self.pidYaw = PID(0.75, 0.1, 0.2, -1.0, 1.0, "yaw")
         self.scale = 1.0
         
 
