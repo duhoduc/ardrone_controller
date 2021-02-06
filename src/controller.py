@@ -111,7 +111,7 @@ class Controller():
         self.setFlightAnimation = rospy.ServiceProxy('ardrone/setflightanimation', FlightAnim)
 
         self.commandTimer = rospy.Timer(rospy.Duration(self.cmd_freq),self.sendCommand)
-        self.droneDataTimer = rospy.Timer(rospy.Duration(self.drone_freq),self.sendDroneData)
+        #self.droneDataTimer = rospy.Timer(rospy.Duration(self.drone_freq),self.sendDroneData)
         #self.goalTimer = rospy.Timer(rospy.Duration(self.drone_freq),self.sendCurrentGoal)
 
         self.listener = TransformListener()
@@ -154,6 +154,19 @@ class Controller():
         self.command.linear.z = self.pidZ.update(0.0, self.pose_error[2])
         self.command.angular.z = self.pidYaw.update(0.0, self.pose_error[3])
 
+        self.drone_msg = ARDroneData()
+            
+        self.drone_msg.header.stamp = rospy.get_rostime()
+        self.drone_msg.header.frame_id = 'drone_data'
+        self.drone_msg.cmd = self.command
+        self.drone_msg.goal.t = rospy.get_time()
+        self.drone_msg.goal.x = self.goal[1]
+        self.drone_msg.goal.y = self.goal[2]
+        self.drone_msg.goal.z = self.goal[3]
+        self.drone_msg.goal.yaw = self.goal[4]
+        self.drone_msg.tm = self.lastNavdata.tm
+        self.pubDroneData.publish(self.drone_msg)
+
         self.pubCmd.publish(self.command)
 
     def sendDroneData(self, event = None):
@@ -161,17 +174,18 @@ class Controller():
             
         self.drone_msg.header.stamp = rospy.get_rostime()
         self.drone_msg.header.frame_id = 'drone_data'
-        self.drone_msg.navdata = self.lastNavdata
-        self.drone_msg.imu = self.lastImu
-        self.drone_msg.mag = self.lastMag
-        self.drone_msg.pose = self.current_pose
-        self.drone_msg.odom = self.current_odom
+        #self.drone_msg.navdata = self.lastNavdata
+        #self.drone_msg.imu = self.lastImu
+        #self.drone_msg.mag = self.lastMag
+        #self.drone_msg.pose = self.current_pose
+        #self.drone_msg.odom = self.current_odom
         self.drone_msg.cmd = self.command
         self.drone_msg.goal.t = rospy.get_time()
         self.drone_msg.goal.x = self.goal[1]
     	self.drone_msg.goal.y = self.goal[2]
     	self.drone_msg.goal.z = self.goal[3]
     	self.drone_msg.goal.yaw = self.goal[4]
+        self.drone_msg.tm = self.lastNavdata.tm
         self.pubDroneData.publish(self.drone_msg)
 
     def sendCurrentGoal(self, event = None):

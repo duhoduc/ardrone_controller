@@ -1,8 +1,9 @@
 std_msgs/Header header
-ardrone_autonomy/Navdata navdata
-sensor_msgs/Imu imu
-geometry_msgs/Vector3Stamped mag
-geometry_msgs/PoseStamped pose
-nav_msgs/Odometry odom
+#ardrone_autonomy/Navdata navdata
+#sensor_msgs/Imu imu
+#geometry_msgs/Vector3Stamped mag
+#geometry_msgs/PoseStamped pose
+#nav_msgs/Odometry odom
 geometry_msgs/Twist cmd
 Goal goal
+float64 tm
