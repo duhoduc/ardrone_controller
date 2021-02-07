@@ -17,40 +17,41 @@ goals = [[0, 0, height, 0],
          [0, -1.5, height, 0.3]
         ]
 
-wp_ref = [[5, 1.5, 0, height, yaw_ref],
-        [20, 0, 0, height, 0.0],
-        [30, -1.5, 0, height, -yaw_ref],
-        [40, 0, 0, height, 0.0],
-        [50, 1.5, 0, height, yaw_ref],
-        [60, 0, 0, height, 0.0],
-        [70, -1.5, 0, height, -yaw_ref],
-        [80, 0, 0, height, 0.0],
-        [90, 1.5, 0, height, yaw_ref],
-        [100, 0, 0, height, 0.0],
-        [110, -1.5, 0, height, -yaw_ref],
-        [120,0, 0, height, 0.0],
-        [130, 1.5, 0, height, yaw_ref],
-        [140, 0, 0, height, 0.0],
-        [150, -1.5, 0, height, -yaw_ref],
-        [160, 0, 0, height, 0.0]]
+
+wp_ref = [[5, 1.5, 1.5, height, yaw_ref],
+        [20, -1.50, 1.50, height, 0.0],
+        [30, -1.5, -1.50, height, -yaw_ref],
+        [40, 1.50, -1.50, height, 0.0],
+        [50, 1.5, 1.50, height, yaw_ref],
+        [60, -1.5, 1.50, height, 0.0],
+        [70, -1.5, -1.50, height, -yaw_ref],
+        [80, 1.5,-1.5, height, 0.0],
+        [90, 1.5, 1.50, height, yaw_ref],
+        [100, -1.50, 1.50, height, 0.0],
+        [110, -1.5, -1.50, height, -yaw_ref],
+        [120,1.50, -1.50, height, 0.0],
+        [130, 1.5, 1.50, height, yaw_ref],
+        [140, -1.50, 1.50, height, 0.0],
+        [150, -1.5, -1.50, height, -yaw_ref],
+        [160, 1.50, -1.50, height, 0.0]]
 
 yaw_ref = 0.0
-wp_ref_0 = [[5, 1.5, 0, height, yaw_ref],
-        [20, 0, 0, height, 0.0],
-        [30, -1.5, 0, height, -yaw_ref],
-        [40, 0, 0, height, 0.0],
-        [50, 1.5, 0, height, yaw_ref],
-        [60, 0, 0, height, 0.0],
-        [70, -1.5, 0, height, -yaw_ref],
-        [80, 0, 0, height, 0.0],
-        [90, 1.5, 0, height, yaw_ref],
-        [100, 0, 0, height, 0.0],
-        [110, -1.5, 0, height, -yaw_ref],
-        [120,0, 0, height, 0.0],
-        [130, 1.5, 0, height, yaw_ref],
-        [140, 0, 0, height, 0.0],
-        [150, -1.5, 0, height, -yaw_ref],
-        [160, 0, 0, height, 0.0]]
+wp_ref_0 = [[5, 1.5, 1.5, height, yaw_ref],
+        [20, -1.50, 1.50, height, 0.0],
+        [30, -1.5, -1.50, height, -yaw_ref],
+        [40, 1.50, -1.50, height, 0.0],
+        [50, 1.5, 1.50, height, yaw_ref],
+        [60, -1.5, 1.50, height, 0.0],
+        [70, -1.5, -1.50, height, -yaw_ref],
+        [80, 1.5,-1.5, height, 0.0],
+        [90, 1.5, 1.50, height, yaw_ref],
+        [100, -1.50, 1.50, height, 0.0],
+        [110, -1.5, -1.50, height, -yaw_ref],
+        [120,1.50, -1.50, height, 0.0],
+        [130, 1.5, 1.50, height, yaw_ref],
+        [140, -1.50, 1.50, height, 0.0],
+        [150, -1.5, -1.50, height, -yaw_ref],
+        [160, 1.50, -1.50, height, 0.0]]
 
 # Need to read from text file the path, do it tomorrow
 
@@ -120,8 +121,8 @@ def talker():
             for t in range(len(wp_ref)):
                 goal = Goal()
                 goal.t = wp_ref[t][0]*0.5
-                goal.x = wp_ref[t][1]
-                goal.y = wp_ref[t][2]
+                goal.x = wp_ref[t][1]*1.25
+                goal.y = wp_ref[t][2]*1.25
                 goal.z = wp_ref[t][3]
                 goal.yaw = wp_ref[t][4]
                 wp_msg.waypoints.append(goal)
@@ -136,8 +137,8 @@ def talker():
             for t in range(len(wp_ref_0)):
                 goal = Goal()
                 goal.t = wp_ref_0[t][0]*0.5
-                goal.x = wp_ref_0[t][1]
-                goal.y = wp_ref_0[t][2]
+                goal.x = wp_ref_0[t][1]*1.25
+                goal.y = wp_ref_0[t][2]*1.25
                 goal.z = wp_ref_0[t][3]
                 goal.yaw = wp_ref_0[t][4]
                 wp_msg.waypoints.append(goal)
