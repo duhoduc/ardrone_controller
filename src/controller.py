@@ -83,8 +83,8 @@ class Controller():
         self.previousDebugTime = rospy.get_time()
 		
         self.pose_error = [0,0,0,0]
-        self.pidX = PID(0.5, 0.1, 0.05, -1, 1, "x")
-        self.pidY = PID(0.5, 0.1, 0.05, -1, 1, "y")
+        self.pidX = PID(0.35, 0.15, 0.025, -1, 1, "x")
+        self.pidY = PID(0.35, 0.15, 0.025, -1, 1, "y")
         self.pidZ = PID(1.25, 0.1, 0.25, -1.0, 1.0, "z")
         self.pidYaw = PID(0.75, 0.1, 0.2, -1.0, 1.0, "yaw")
         self.scale = 1.0
@@ -211,7 +211,7 @@ class Controller():
         rospy.loginfo(points)
         time_wp = [goal[0] for goal in points]
         self.goal = points[index] #get the first point
-        delta_time_wp = time_up[1]-time_up[0]
+        delta_time_wp = time_wp[1]-time_wp[0]
         self.goal_rate = [(points[1][i]-points[0][i])/delta_time_wp  for i in range(5)]
         
         minX = .05

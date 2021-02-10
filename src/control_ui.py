@@ -18,40 +18,27 @@ goals = [[0, 0, height, 0],
         ]
 
 
-wp_ref = [[5, 1.5, 1.5, height, yaw_ref],
-        [20, -1.50, 1.50, height, 0.0],
-        [30, -1.5, -1.50, height, -yaw_ref],
-        [40, 1.50, -1.50, height, 0.0],
-        [50, 1.5, 1.50, height, yaw_ref],
-        [60, -1.5, 1.50, height, 0.0],
-        [70, -1.5, -1.50, height, -yaw_ref],
-        [80, 1.5,-1.5, height, 0.0],
-        [90, 1.5, 1.50, height, yaw_ref],
-        [100, -1.50, 1.50, height, 0.0],
-        [110, -1.5, -1.50, height, -yaw_ref],
-        [120,1.50, -1.50, height, 0.0],
-        [130, 1.5, 1.50, height, yaw_ref],
-        [140, -1.50, 1.50, height, 0.0],
-        [150, -1.5, -1.50, height, -yaw_ref],
-        [160, 1.50, -1.50, height, 0.0]]
+wp_ref = [[5, -1.5, -1.50, height, -yaw_ref],
+        [15, 1.50, -1.50, height, 0.0],
+        [25, 1.5, 1.50, height, yaw_ref],
+        [35, -1.5, 1.50, height, 0.0],
+        [45, -1.5, -1.50, height, -yaw_ref],
+        [55, 1.5,-1.5, height, 0.0],
+        [65, 1.5, 1.50, height, yaw_ref],
+        [75, -1.50, 1.50, height, 0.0],
+        [85, -1.5, -1.50, height, -yaw_ref]]
 
 yaw_ref = 0.0
-wp_ref_0 = [[5, 1.5, 1.5, height, yaw_ref],
-        [20, -1.50, 1.50, height, 0.0],
-        [30, -1.5, -1.50, height, -yaw_ref],
-        [40, 1.50, -1.50, height, 0.0],
-        [50, 1.5, 1.50, height, yaw_ref],
-        [60, -1.5, 1.50, height, 0.0],
-        [70, -1.5, -1.50, height, -yaw_ref],
-        [80, 1.5,-1.5, height, 0.0],
-        [90, 1.5, 1.50, height, yaw_ref],
-        [100, -1.50, 1.50, height, 0.0],
-        [110, -1.5, -1.50, height, -yaw_ref],
-        [120,1.50, -1.50, height, 0.0],
-        [130, 1.5, 1.50, height, yaw_ref],
-        [140, -1.50, 1.50, height, 0.0],
-        [150, -1.5, -1.50, height, -yaw_ref],
-        [160, 1.50, -1.50, height, 0.0]]
+wp_ref_0 = [[5, -1.5, -1.50, height, -yaw_ref],
+        [15, 1.50, -1.50, height, 0.0],
+        [25, 1.5, 1.50, height, yaw_ref],
+        [35, -1.5, 1.50, height, 0.0],
+        [45, -1.5, -1.50, height, -yaw_ref],
+        [55, 1.5,-1.5, height, 0.0],
+        [65, 1.5, 1.50, height, yaw_ref],
+        [75, -1.50, 1.50, height, 0.0],
+        [85, -1.5, -1.50, height, -yaw_ref]]
+     
 
 # Need to read from text file the path, do it tomorrow
 
@@ -67,7 +54,7 @@ def talker():
     pubCmd = rospy.Publisher('cmd_vel', Twist, queue_size=1)
     pubReset = rospy.Publisher('ardrone/reset', Empty, queue_size=1)
 
-    with open('/home/duho46/catkin_ws/src/ardrone_controller/src/squarePath.txt') as f:
+    with open('/home/duho46/catkin_ws/src/ardrone_controller/src/squarePath3.txt') as f:
         paths = f.read().splitlines()
     f.close()
     path_list = [path.split(',') for path in paths]
@@ -120,7 +107,7 @@ def talker():
             #rospy.loginfo(type(wp_msg.waypoints))
             for t in range(len(wp_ref)):
                 goal = Goal()
-                goal.t = wp_ref[t][0]
+                goal.t = wp_ref[t][0]*0.75
                 goal.x = wp_ref[t][1]*1.25
                 goal.y = wp_ref[t][2]*1.25
                 goal.z = wp_ref[t][3]
@@ -136,7 +123,7 @@ def talker():
             #rospy.loginfo(type(wp_msg.waypoints))
             for t in range(len(wp_ref_0)):
                 goal = Goal()
-                goal.t = wp_ref_0[t][0]
+                goal.t = wp_ref_0[t][0]*0.75
                 goal.x = wp_ref_0[t][1]*1.25
                 goal.y = wp_ref_0[t][2]*1.25
                 goal.z = wp_ref_0[t][3]
