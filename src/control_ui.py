@@ -120,7 +120,7 @@ def talker():
             #rospy.loginfo(type(wp_msg.waypoints))
             for t in range(len(wp_ref)):
                 goal = Goal()
-                goal.t = wp_ref[t][0]*0.5
+                goal.t = wp_ref[t][0]
                 goal.x = wp_ref[t][1]*1.25
                 goal.y = wp_ref[t][2]*1.25
                 goal.z = wp_ref[t][3]
@@ -136,7 +136,7 @@ def talker():
             #rospy.loginfo(type(wp_msg.waypoints))
             for t in range(len(wp_ref_0)):
                 goal = Goal()
-                goal.t = wp_ref_0[t][0]*0.5
+                goal.t = wp_ref_0[t][0]
                 goal.x = wp_ref_0[t][1]*1.25
                 goal.y = wp_ref_0[t][2]*1.25
                 goal.z = wp_ref_0[t][3]
@@ -158,7 +158,7 @@ def talker():
             wp_msg = Waypoints()
             for wp in wp_square:
                 goal = Goal()
-                goal.t = wp[0]*0.5
+                goal.t = wp[0]
                 goal.x = wp[1]
                 goal.y = wp[2]
                 goal.z = wp[3]

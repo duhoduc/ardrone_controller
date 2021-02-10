@@ -91,6 +91,7 @@ class Controller():
         
 
         self.goal = [-1,0,0,height,0] #set it to center to start
+        self.goal_rate = [0,0,0,0,0] # Use the update the goal on time
         self.current_goal = Goal() # Use this to store current goal, reference time-dependent
         self.goal_done = False
         self.waypoints = None
@@ -208,11 +209,15 @@ class Controller():
     def waypoint_follower(self, points): 
         index = 0
         rospy.loginfo(points)
-        self.goal = points[index] #get the first point
         time_wp = [goal[0] for goal in points]
+        self.goal = points[index] #get the first point
+        delta_time_wp = time_up[1]-time_up[0]
+        self.goal_rate = [(points[1][i]-points[0][i])/delta_time_wp  for i in range(5)]
+        
         minX = .05
         minY = .05 
         time0_wp = rospy.get_time()
+        time_previous_goal = time0_wp
         while True:#for i in range(0,points.len()):
             #goal = points[i]
             # transform target world coordinates into local coordinates
@@ -220,7 +225,16 @@ class Controller():
             t = self.listener.getLatestCommonTime("/ARDrone", "/mocap")
             if self.listener.canTransform("/ARDrone", "/mocap", t):
                 # Get starting time
-                startCmdTime = rospy.get_time()
+                time_current_goal = rospy.get_time()
+                diff_time_goal = time_current_goal-time_previous_goal
+                time_previous_goal = time_current_goal
+                # Update the current goal using rate
+                current_goalX = self.goal_rate[1]*diff_time_goal+self.goal[1]
+                current_goalY = self.goal_rate[2]*diff_time_goal+self.goal[2]
+                current_goalZ = self.goal_rate[3]*diff_time_goal+self.goal[3]
+                current_goalYaw = self.goal_rate[4]*diff_time_goal+self.goal[4]
+
+                self.goal = [time_current_goal-time0_wp,current_goalX,current_goalY,current_goalZ,current_goalYaw]
 
                 targetWorld.header.stamp = t
                 targetWorld.header.frame_id = "mocap"
@@ -289,6 +303,10 @@ class Controller():
                     if diff_time_wp<=time_wp[-1]:
                         index = next(x for x, val in enumerate(time_wp) if val >= diff_time_wp)
                         self.goal = points[index]
+                        if (index<len(points)-1):
+                            self.goal_rate = [(points[index+1][i]-points[index][i])/delta_time_wp for i in range(5)]
+                        else:
+                            self.goal_rate = [1,0,0,0,0]
                     else:
                         return
 
