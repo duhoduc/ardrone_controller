@@ -39,6 +39,19 @@ wp_ref_0 = [[5, -1.5, -1.50, height, -yaw_ref],
         [75, -1.50, 1.50, height, 0.0],
         [85, -1.5, -1.50, height, -yaw_ref]]
      
+x_max = 2.0
+y_max = 2.0
+yaw_ref = 0.3;
+wp_ref_0 = [[5, -x_max, -y_max, height, 0.0],
+        [10,-x_max, -y_max, height, yaw_ref],
+        [15, x_max, -y_max, height, yaw_ref],
+        [20, x_max, -y_max, height, -yaw_ref],
+        [25, x_max, y_max, height, -yaw_ref],
+        [30, x_max, y_max, height, yaw_ref],
+        [35, -x_max, y_max, height, yaw_ref],
+        [40, -x_max, y_max, height, -yaw_ref],
+        [45, -x_max, -y_max, height, -yaw_ref],
+        [50, -x_max, -y_max, height, 0.0]]
 
 # Need to read from text file the path, do it tomorrow
 
