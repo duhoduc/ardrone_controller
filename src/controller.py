@@ -85,7 +85,7 @@ class Controller():
         self.pose_error = [0,0,0,0]
         self.pidX = PID(0.35, 0.15, 0.025, -1, 1, "x")
         self.pidY = PID(0.35, 0.15, 0.025, -1, 1, "y")
-        self.pidZ = PID(1.25, 0.1, 0.25, -1.0, 1.0, "z")
+        self.pidZ = PID(1.5, 0.1, 0.5, -1.0, 1.0, "z")
         self.pidYaw = PID(0.75, 0.1, 0.2, -1.0, 1.0, "yaw")
         self.scale = 1.0
         
@@ -237,10 +237,10 @@ class Controller():
                 diff_time_goal = time_current_goal-time_previous_goal
                 time_previous_goal = time_current_goal
                 # Update the continuous goal using rate*t+current_goal
-                current_goalX = self.goal_rate[1]*diff_time_goal+self.current_goal.x
-                current_goalY = self.goal_rate[2]*diff_time_goal+self.current_goal.y
-                current_goalZ = self.goal_rate[3]*diff_time_goal+self.current_goal.z
-                current_goalYaw = self.goal_rate[4]*diff_time_goal+self.current_goal.yaw
+                current_goalX = self.goal_rate[1]*diff_time_goal+self.goal[1]
+                current_goalY = self.goal_rate[2]*diff_time_goal+self.goal[2]
+                current_goalZ = self.goal_rate[3]*diff_time_goal+self.goal[3]
+                current_goalYaw = self.goal_rate[4]*diff_time_goal+self.goal[4]
 
                 self.goal = [time_current_goal-time0_wp,current_goalX,current_goalY,current_goalZ,current_goalYaw]
 
