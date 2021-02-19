@@ -215,7 +215,7 @@ class Controller():
         time_wp = [goal[0] for goal in points]
 
         self.goal = points[current_index] #get the first point
-        delta_time_wp = 0.1
+        delta_time_wp = time_wp[1]-time_wp[0]
         self.achieved_goal.t = points[0][0]
         self.achieved_goal.x = points[0][1]
         self.achieved_goal.y = points[0][2]
@@ -229,7 +229,7 @@ class Controller():
         minX = .05
         minY = .05 
         time0_wp = rospy.get_time()
-        time_previous_goal = time0_wp
+        time_achieved_goal = time0_wp
         while True:#for i in range(0,points.len()):
             #goal = points[i]
             # transform target world coordinates into local coordinates
@@ -238,14 +238,14 @@ class Controller():
             if self.listener.canTransform("/ARDrone", "/mocap", t):
                 # Get starting time
                 time_current_goal = rospy.get_time()
-                diff_time_goal = time_current_goal-time_previous_goal
-                time_previous_goal = time_current_goal
+                diff_time_goal = time_current_goal-time_achieved_goal
+
                 
                 # Update the continuous goal using: goal = rate*t+goal
-                current_goalX = self.goal_rate[1]*diff_time_goal+self.goal.x
-                current_goalY = self.goal_rate[2]*diff_time_goal+self.goal.y
-                current_goalZ = self.goal_rate[3]*diff_time_goal+self.goal.z
-                current_goalYaw = self.goal_rate[4]*diff_time_goal+self.goal.yaw
+                current_goalX = self.goal_rate[1]*diff_time_goal+self.achieved_goal.x
+                current_goalY = self.goal_rate[2]*diff_time_goal+self.achieved_goal.y
+                current_goalZ = self.goal_rate[3]*diff_time_goal+self.achieved_goal.z
+                current_goalYaw = self.goal_rate[4]*diff_time_goal+self.achieved_goal.yaw
 
                 self.goal = [time_current_goal-time0_wp,current_goalX,current_goalY,current_goalZ,current_goalYaw]
 
@@ -310,6 +310,7 @@ class Controller():
                             self.next_goal.yaw = points[current_index][4]
 
                             self.goal_rate = [(points[current_index][i]-points[previous_index][i])/delta_time_wp for i in range(5)]
+                            time_achieved_goal = current_time_wp
                         else:
                         	self.achieved_goal.t = points[0][0]
                             self.achieved_goal.x = points[0][1]
