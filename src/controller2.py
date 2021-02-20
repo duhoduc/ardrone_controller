@@ -215,7 +215,7 @@ class Controller():
         time_wp = [goal[0] for goal in points]
 
         self.goal = points[current_index] #get the first point
-        delta_time_wp = time_wp[1]-time_wp[0]
+        dt_two_wp = time_wp[1]-time_wp[0]
         self.achieved_goal.t = points[0][0]
         self.achieved_goal.x = points[0][1]
         self.achieved_goal.y = points[0][2]
@@ -238,16 +238,16 @@ class Controller():
             if self.listener.canTransform("/ARDrone", "/mocap", t):
                 # Get starting time
                 time_current_goal = rospy.get_time()
-                diff_time_goal = time_current_goal-time_achieved_goal
+                dt_current_achieve = time_current_goal-time_achieved_goal
 
                 
                 # Update the continuous goal using: goal = rate*t+goal
-                current_goalX = self.goal_rate[1]*diff_time_goal+self.achieved_goal.x
-                current_goalY = self.goal_rate[2]*diff_time_goal+self.achieved_goal.y
-                current_goalZ = self.goal_rate[3]*diff_time_goal+self.achieved_goal.z
-                current_goalYaw = self.goal_rate[4]*diff_time_goal+self.achieved_goal.yaw
+                current_goalX = self.goal_rate[1]*dt_current_achieve+self.achieved_goal.x
+                current_goalY = self.goal_rate[2]*dt_current_achieve+self.achieved_goal.y
+                current_goalZ = self.goal_rate[3]*dt_current_achieve+self.achieved_goal.z
+                current_goalYaw = self.goal_rate[4]*dt_current_achieve+self.achieved_goal.yaw
 
-                self.goal = [time_current_goal-time0_wp,current_goalX,current_goalY,current_goalZ,current_goalYaw]
+                self.goal = [self.next_goal.t,current_goalX,current_goalY,current_goalZ,current_goalYaw]
 
                 targetWorld.header.stamp = t
                 targetWorld.header.frame_id = "mocap"
@@ -275,7 +275,7 @@ class Controller():
                 # Run PID controller and send navigation message
 
                 error_xy = math.sqrt(targetDrone.pose.position.x**2+targetDrone.pose.position.y**2)
-                current_time_wp = rospy.get_time()
+                time_current_wp = rospy.get_time()
                 if self.goal[0] < 0: #-1 implying that waypoints is not time-dependent
                     # goal t, x, y, z, yaw
                     #self.goal = points[current_index]
@@ -290,8 +290,8 @@ class Controller():
                             return
                 else:
                 	# Check how long from the first point
-                    diff_time_wp = current_time_wp-time0_wp
-                    if diff_time_wp<=time_wp[-1]-time_wp[0]: # this time should be less than the 
+                    diff_time_wp = time_current_wp-time0_wp
+                    if diff_time_wp<=time_wp[-1]-time_wp[0]: # this time should be less than the time defined wp
                         # Check the index of current goal based on rospy time and time vector in waypoints
                         current_index = next(x for x, val in enumerate(time_wp) if val >= diff_time_wp)
                         if current_index > 0:
@@ -309,8 +309,8 @@ class Controller():
                             self.next_goal.z = points[current_index][3]
                             self.next_goal.yaw = points[current_index][4]
 
-                            self.goal_rate = [(points[current_index][i]-points[previous_index][i])/delta_time_wp for i in range(5)]
-                            time_achieved_goal = current_time_wp
+                            self.goal_rate = [(points[current_index][i]-points[previous_index][i])/dt_two_wp for i in range(5)]
+                            time_achieved_goal = time_current_wp
                         else:
                         	self.achieved_goal.t = points[0][0]
                             self.achieved_goal.x = points[0][1]
